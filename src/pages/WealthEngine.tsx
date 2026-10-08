@@ -62,7 +62,15 @@ export default function WealthEngine() {
     }
   }, [])
 
-  useEffect(() => { fetchData() }, [fetchData])
+  useEffect(() => { 
+    fetchData() 
+
+    const handleUpdate = () => {
+      fetchData()
+    }
+    window.addEventListener('halo:wealth_updated', handleUpdate)
+    return () => window.removeEventListener('halo:wealth_updated', handleUpdate)
+  }, [fetchData])
 
   // ── Derived ─────────────────────────────────────────────────────────────
   const totalAssets = assets.reduce((s, a) => s + a.value, 0)

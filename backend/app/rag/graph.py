@@ -42,12 +42,13 @@ class GraphState(TypedDict):
     messages:           list   # full OpenAI-format message history as plain dicts
     tool_rounds:        int    # how many tool-call rounds we've done
     _tool_calls:        list   # pending tool calls from the last LLM response
+    executed_tools:     list   # tools executed during this run
 
 
 # ── Nodes ────────────────────────────────────────────────────────────────────
 
 def process_query(state: GraphState):
-    return {"processed_question": state["question"].strip(), "tool_rounds": 0, "messages": []}
+    return {"processed_question": state["question"].strip(), "tool_rounds": 0, "messages": [], "executed_tools": []}
 
 
 def retrieve_documents(state: GraphState):
@@ -177,10 +178,12 @@ def execute_tools_node(state: GraphState):
     tool_calls = state.get("_tool_calls", [])
     messages   = state.get("messages", [])
     rounds     = state.get("tool_rounds", 0)
+    executed   = list(state.get("executed_tools", []))
 
     for tc in tool_calls:
         tool_result = execute_tool(tc["name"], tc["arguments"])
         logger.info(f"Tool '{tc['name']}' → {tool_result[:200]}")
+        executed.append(tc["name"])
 
         content_to_pass = tool_result
         if tool_result.startswith("ERROR"):
@@ -199,9 +202,10 @@ def execute_tools_node(state: GraphState):
         })
 
     return {
-        "messages":    messages,
-        "tool_rounds": rounds + 1,
-        "_tool_calls": [],
+        "messages":       messages,
+        "tool_rounds":    rounds + 1,
+        "_tool_calls":    [],
+        "executed_tools": executed,
     }
 
 
@@ -305,14 +309,16 @@ def run_rag_pipeline(question: str) -> dict:
         if not answer:
             answer = "Sorry, I could not generate a response at this time."
         return {
-            "answer":     answer,
-            "sources":    result.get("sources", []),
-            "confidence": result.get("confidence", 0.0),
+            "answer":         answer,
+            "sources":        result.get("sources", []),
+            "confidence":     result.get("confidence", 0.0),
+            "executed_tools": result.get("executed_tools", []),
         }
     except Exception as e:
         logger.error(f"RAG pipeline error: {e}")
         return {
-            "answer":     f"An error occurred while processing your request: {e!s}",
-            "sources":    [],
-            "confidence": 0.0,
+            "answer":         f"An error occurred while processing your request: {e!s}",
+            "sources":        [],
+            "confidence":     0.0,
+            "executed_tools": [],
         }

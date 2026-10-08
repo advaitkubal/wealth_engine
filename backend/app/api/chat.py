@@ -51,7 +51,8 @@ def chat(request: ChatRequest):
         sources=citations,
         confidence=result["confidence"],
         conversation_id=conversation_id,
-        processing_time_ms=processing_time
+        processing_time_ms=processing_time,
+        executed_tools=result.get("executed_tools", [])
     )
 
 @router.get("/conversations")

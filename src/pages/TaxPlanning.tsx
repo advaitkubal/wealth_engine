@@ -4,13 +4,20 @@ import { useNavigate } from '../router'
 import VoiceMicButton from '../components/VoiceMicButton'
 import DocumentScanModal from '../components/DocumentScanModal'
 
-interface Msg { role: 'user' | 'ai'; text: string; clauses?: string[]; suggestions?: string[] }
+interface Msg { 
+  role: 'user' | 'ai'; 
+  text: string; 
+  clauses?: string[]; 
+  suggestions?: string[];
+  wealth_action?: boolean;
+}
 
 const STORAGE_KEY_MSGS = 'halo_chat_msgs'
 const STORAGE_KEY_CONV = 'halo_chat_conv_id'
 
 const QUICK = [
   { label: 'My Net Worth',                    q: 'What is my current net worth?' },
+  { label: 'Add 15L Mutual Funds',            q: 'Add 15 lakhs to my Mutual Funds asset' },
   { label: 'Optimize Section 80C',            q: 'How do I maximize my Section 80C deductions?' },
   { label: 'Should I pay off my loan early?', q: 'Should I prepay my home loan or invest that money?' },
   { label: 'Old vs New Tax Regime',           q: 'Which tax regime is better for me?' },
@@ -20,7 +27,7 @@ const WELCOME: Msg = {
   role: 'ai',
   text: `Hi! I'm Halo, your AI wealth advisor 👋\n\nI have access to your live portfolio and can help with tax planning, investments, loans, and more. What's on your mind?`,
   clauses: [],
-  suggestions: ['My Net Worth', 'Optimize Section 80C', 'Should I pay off my loan early?'],
+  suggestions: ['My Net Worth', 'Add 15L Mutual Funds', 'Optimize Section 80C'],
 }
 
 function loadMsgs(): Msg[] {
@@ -45,6 +52,7 @@ function ClauseTag({ label }: { label: string }) {
 }
 
 function AiCard({ msg, onSuggest }: { msg: Msg; onSuggest: (s: string) => void }) {
+  const navigate = useNavigate()
   return (
     <div className="flex gap-3">
       <div className="w-8 h-8 rounded-full bg-[#2B2644] flex items-center justify-center shrink-0 mt-0.5">
@@ -63,6 +71,20 @@ function AiCard({ msg, onSuggest }: { msg: Msg; onSuggest: (s: string) => void }
               return <p key={i} className="mb-1 text-black/70">{line.replace(/\*\*/g, '')}</p>
             })}
           </div>
+
+          {msg.wealth_action && (
+            <div className="mt-4 p-3 bg-emerald-50 border border-emerald-200/60 rounded-xl flex items-center justify-between">
+              <span className="text-xs font-medium text-emerald-800 flex items-center gap-1.5">
+                ⚡ Portfolio Updated live in database!
+              </span>
+              <button
+                onClick={() => navigate('/wealth-engine')}
+                className="text-xs font-semibold text-emerald-700 bg-white border border-emerald-200 px-3 py-1.5 rounded-lg hover:bg-emerald-100 transition-colors"
+              >
+                View in Wealth Engine ➔
+              </button>
+            </div>
+          )}
           {msg.clauses && msg.clauses.length > 0 && (
             <div className="mt-3 pt-3 border-t border-gray-100">
               <p className="text-xs text-black/40 mb-2">References</p>
@@ -190,10 +212,20 @@ export default function TaxPlanning() {
       )
       const unique = Array.from(new Set(citations)) as string[]
 
+      const toolsExecuted: string[] = data.executed_tools || []
+      const isWealthAction = toolsExecuted.some((t: string) => 
+        ['add_asset', 'add_liability', 'delete_asset', 'delete_liability'].includes(t)
+      )
+
+      if (isWealthAction) {
+        window.dispatchEvent(new CustomEvent('halo:wealth_updated'))
+      }
+
       setMsgs(m => [...m, {
         role: 'ai',
         text: data.answer || "Sorry, I couldn't generate a response.",
         clauses: unique,
+        wealth_action: isWealthAction,
       }])
     } catch {
       setMsgs(m => [...m, {
@@ -229,6 +261,12 @@ export default function TaxPlanning() {
 
           {/* Sidebar */}
           <div className="flex flex-col gap-3">
+            <button
+              onClick={clearChat}
+              className="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm rounded-2xl shadow-sm transition-all flex items-center justify-center gap-2 mb-2"
+            >
+              <Trash2 className="w-4 h-4" /> Start New Chat
+            </button>
             <p className="text-xs font-medium text-black/40 uppercase tracking-widest mb-1">Quick Topics</p>
             {QUICK.map(({ label, q }) => (
               <button key={label} onClick={() => send(q)}

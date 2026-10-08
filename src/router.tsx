@@ -9,10 +9,10 @@ const Ctx = createContext<RouterCtx>({ path: '/', navigate: () => {} })
 
 /* ── Provider ── */
 export function Router({ children }: { children: ReactNode }) {
-  const [path, setPath] = useState(() => window.location.pathname)
+  const [path, setPath] = useState(() => window.location.pathname + window.location.search)
 
   useEffect(() => {
-    const sync = () => setPath(window.location.pathname)
+    const sync = () => setPath(window.location.pathname + window.location.search)
     window.addEventListener('popstate', sync)
     return () => window.removeEventListener('popstate', sync)
   }, [])
@@ -50,7 +50,8 @@ interface NavLinkProps {
 }
 export function NavLink({ to, children, className }: NavLinkProps) {
   const { path, navigate } = useContext(Ctx)
-  const isActive = path === to
+  const currentPathname = path.split('?')[0]
+  const isActive = currentPathname === to
   const cls = typeof className === 'function' ? className({ isActive }) : className
   return (
     <a href={to} className={cls}
@@ -66,10 +67,11 @@ export function Route(_p: RouteProps): null { return null }
 
 export function Routes({ children }: { children: ReactNode }) {
   const { path } = useContext(Ctx)
+  const currentPathname = path.split('?')[0]
   const kids = Array.isArray(children) ? children : [children]
   for (const child of kids) {
     const el = child as ReactElement<RouteProps>
-    if (el?.props?.path === path) return <>{el.props.element}</>
+    if (el?.props?.path === currentPathname) return <>{el.props.element}</>
   }
   return null
 }

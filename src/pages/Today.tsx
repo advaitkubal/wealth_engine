@@ -35,6 +35,12 @@ export default function Today() {
       .then(r => r.json())
       .then(data => setScore(data.score))
       .catch(() => {})
+
+    const handleUpdate = () => {
+      fetchSummary()
+    }
+    window.addEventListener('halo:wealth_updated', handleUpdate)
+    return () => window.removeEventListener('halo:wealth_updated', handleUpdate)
   }, [])
 
   const handleAsk = () => {

@@ -40,6 +40,7 @@ class ChatResponse(BaseModel):
     confidence: float
     conversation_id: str
     processing_time_ms: int
+    executed_tools: list[str] = []
 
 class HealthResponse(BaseModel):
     status: str
