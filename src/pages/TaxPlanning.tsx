@@ -1,5 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
-import { Send, ChevronDown, ChevronUp, Sparkles, Trash2 } from 'lucide-react'
+import { Send, ChevronDown, ChevronUp, Sparkles, Trash2, Upload } from 'lucide-react'
+import { useNavigate } from '../router'
+import VoiceMicButton from '../components/VoiceMicButton'
+import DocumentScanModal from '../components/DocumentScanModal'
 
 interface Msg { role: 'user' | 'ai'; text: string; clauses?: string[]; suggestions?: string[] }
 
@@ -89,7 +92,9 @@ export default function TaxPlanning() {
   )
   const [input, setInput]     = useState('')
   const [thinking, setThinking] = useState(false)
+  const [isScanOpen, setIsScanOpen] = useState(false)
   const bottomRef             = useRef<HTMLDivElement>(null)
+  const navigate              = useNavigate()
 
   // Persist to localStorage on every change
   useEffect(() => {
@@ -122,15 +127,59 @@ export default function TaxPlanning() {
 
   const send = async (text: string) => {
     if (!text.trim() || thinking) return
-    setMsgs(m => [...m, { role: 'user', text }])
+    const cleanedText = text.trim()
+    setMsgs(m => [...m, { role: 'user', text: cleanedText }])
     setInput('')
     setThinking(true)
+
+    // Handle UI navigation commands directly
+    const lower = cleanedText.toLowerCase()
+    if (lower.includes('open wealth engine') || lower.includes('go to wealth engine') || lower === 'wealth engine') {
+      setTimeout(() => {
+        setThinking(false)
+        setMsgs(m => [...m, { role: 'ai', text: 'Opening your Wealth Engine dashboard now! 🚀' }])
+        navigate('/wealth-engine')
+      }, 400)
+      return
+    }
+    if (lower.includes('open calculators') || lower.includes('go to calculators') || lower === 'calculators') {
+      setTimeout(() => {
+        setThinking(false)
+        setMsgs(m => [...m, { role: 'ai', text: 'Opening Tax & Loan Calculators! 🧮' }])
+        navigate('/calculators')
+      }, 400)
+      return
+    }
+    if (lower.includes('open security') || lower.includes('go to security') || lower === 'security') {
+      setTimeout(() => {
+        setThinking(false)
+        setMsgs(m => [...m, { role: 'ai', text: 'Opening Security & Air-Gap Architecture page! 🛡️' }])
+        navigate('/security')
+      }, 400)
+      return
+    }
+    if (lower.includes('open tax rules') || lower.includes('show tax rules') || lower === 'tax rules') {
+      setTimeout(() => {
+        setThinking(false)
+        setMsgs(m => [...m, { role: 'ai', text: 'Opening Tax Rules Engine Status page! 📜' }])
+        navigate('/tax-rules')
+      }, 400)
+      return
+    }
+    if (lower.includes('open dashboard') || lower.includes('go home') || lower.includes('go to today')) {
+      setTimeout(() => {
+        setThinking(false)
+        setMsgs(m => [...m, { role: 'ai', text: 'Returning to Today Dashboard! 🏠' }])
+        navigate('/')
+      }, 400)
+      return
+    }
 
     try {
       const response = await fetch('http://localhost:8000/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: text, conversation_id: convId }),
+        body: JSON.stringify({ question: cleanedText, conversation_id: convId }),
       })
 
       const data = await response.json()
@@ -224,22 +273,38 @@ export default function TaxPlanning() {
             </div>
 
             {/* Input */}
-            <div className="border-t border-gray-100 p-4 flex gap-3">
+            <div className="border-t border-gray-100 p-4 flex items-center gap-2">
+              <button
+                onClick={() => setIsScanOpen(true)}
+                title="Scan & Upload Document"
+                className="p-3 rounded-xl border border-gray-200 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 transition-all flex items-center justify-center shrink-0"
+              >
+                <Upload className="w-4 h-4" />
+              </button>
+
               <input
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && send(input)}
-                placeholder="Ask about your portfolio, tax codes, investments..."
+                placeholder="Ask about your portfolio, tax codes, or say 'open wealth engine'..."
                 className="flex-1 text-sm bg-[#F5F5F5] rounded-xl px-4 py-3 outline-none text-black placeholder-black/40"
               />
+
+              <VoiceMicButton onTranscript={(txt) => setInput(txt)} />
+
               <button onClick={() => send(input)}
-                className="bg-[#2B2644] text-white p-3 rounded-xl hover:bg-black transition-colors duration-200">
+                className="bg-[#2B2644] text-white p-3 rounded-xl hover:bg-black transition-colors duration-200 shrink-0">
                 <Send className="w-4 h-4" />
               </button>
             </div>
           </div>
         </div>
       </div>
+
+      <DocumentScanModal
+        isOpen={isScanOpen}
+        onClose={() => setIsScanOpen(false)}
+      />
     </div>
   )
 }

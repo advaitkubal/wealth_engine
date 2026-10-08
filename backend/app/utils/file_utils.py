@@ -9,15 +9,10 @@ def sanitize_filename(filename: str) -> str:
     return filename
 
 def validate_pdf(file_path: Path) -> bool:
-    if file_path.suffix.lower() != '.pdf':
-        return False
-
-    try:
-        with open(file_path, 'rb') as f:
-            header = f.read(4)
-            return header == b'%PDF'
-    except Exception:
-        return False
+    ext = file_path.suffix.lower()
+    if ext in ['.pdf', '.csv', '.json', '.txt', '.png', '.jpg', '.jpeg']:
+        return True
+    return False
 
 def get_upload_dir() -> Path:
     base_dir = Path(__file__).resolve().parent.parent.parent.parent

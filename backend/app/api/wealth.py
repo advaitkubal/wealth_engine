@@ -30,17 +30,18 @@ class LiabilityIn(BaseModel):
 # ── Helper ───────────────────────────────────────────────────────────────────
 
 def _seed_defaults(conn):
-    """Seed the DB with the default assets/liabilities if it's empty."""
+    """Seed the DB with realistic Indian financial portfolio defaults if empty."""
     count = conn.execute("SELECT COUNT(*) FROM assets").fetchone()[0]
     if count == 0:
         now = datetime.datetime.now().isoformat()
         defaults_a = [
-            ('Equity',       'NIFTY 50 ETF',          450000, 12.5),
-            ('Mutual Funds', 'HDFC Flexicap Fund',     280000, 11.2),
-            ('Gold',         'Digital Gold',           120000,  8.0),
-            ('Real Estate',  'Residential Property', 3500000,  6.5),
-            ('NPS/PPF',      'PPF Account',            350000,  7.1),
-            ('Cash',         'Savings Account',         85000,  3.5),
+            ('Real Estate',  '3BHK Luxury Apartment, Bandra West', 28000000,  7.5),
+            ('Mutual Funds', 'Nippon India Small Cap & Parag Parikh Flexi', 4500000, 14.2),
+            ('Equity',       'Direct Equity (HDFC Bank, Reliance, TCS)',  3550000, 12.8),
+            ('NPS/PPF',      'EPF & Public Provident Fund (PPF)',         1820000,  7.1),
+            ('Fixed Deposit','HDFC Bank 1-Yr Fixed Deposit @ 7.25%',     1500000,  7.25),
+            ('Gold',         'Sovereign Gold Bonds (SGB 2021-22 IV)',     1200000,  8.5),
+            ('Cash',         'ICICI Bank Emergency Savings Account',       850000,  3.5),
         ]
         for t, lbl, v, y in defaults_a:
             conn.execute(
@@ -52,14 +53,22 @@ def _seed_defaults(conn):
     if count2 == 0:
         now = datetime.datetime.now().isoformat()
         defaults_l = [
-            ('Home Loan', 'SBI Home Loan',  2800000, 8.5, 25000, 180),
-            ('Car Loan',  'HDFC Car Loan',   450000, 9.0, 12000,  42),
+            ('Home Loan', 'HDFC Bandra Property Home Loan', 6500000, 8.5, 56400, 180),
+            ('Car Loan',  'Tata Nexon EV Green Car Loan',    820000, 8.9, 18500,  48),
         ]
         for t, lbl, r, rate, emi, ten in defaults_l:
             conn.execute(
                 "INSERT INTO liabilities(type,label,remaining,rate,emi,tenure,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?)",
                 (t, lbl, r, rate, emi, ten, now, now)
             )
+
+@router.post("/reset")
+def reset_defaults():
+    with database.get_db() as conn:
+        conn.execute("DELETE FROM assets")
+        conn.execute("DELETE FROM liabilities")
+        _seed_defaults(conn)
+    return {"status": "reseeded"}
 
 # ── Assets endpoints ─────────────────────────────────────────────────────────
 
