@@ -3,7 +3,7 @@ import { ResponsiveContainer, XAxis, YAxis, Tooltip, AreaChart, Area } from 'rec
 import { useNavigate } from '../router'
 import VoiceMicButton from '../components/VoiceMicButton'
 import DocumentScanModal from '../components/DocumentScanModal'
-import { Upload, RefreshCw, ChevronRight } from 'lucide-react'
+import { Upload, RefreshCw, ChevronRight, Sparkles } from 'lucide-react'
 
 const MOCK_DATA = [
   { name: 'Jan', val: 280 },
@@ -155,6 +155,13 @@ export default function Today() {
           className="whitespace-nowrap px-6 py-3 bg-white border border-slate-200 text-slate-700 text-sm font-medium rounded-xl hover:bg-slate-50 transition-colors shadow-sm"
         >
           Manage Assets &amp; Loans
+        </button>
+
+        <button
+          onClick={() => navigate('/what-if')}
+          className="whitespace-nowrap px-6 py-3 bg-indigo-50 border border-indigo-200 text-indigo-700 text-sm font-semibold rounded-xl hover:bg-indigo-100 transition-colors shadow-sm flex items-center gap-2"
+        >
+          <Sparkles className="w-4 h-4 text-indigo-600" /> What-If Life Simulators
         </button>
 
         <button

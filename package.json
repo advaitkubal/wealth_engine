@@ -15,6 +15,8 @@
     "@heroicons/react": "^2.2.0",
     "cmdk": "^1.1.1",
     "framer-motion": "^14.0.0",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.8",
     "lucide-react": "^0.475.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

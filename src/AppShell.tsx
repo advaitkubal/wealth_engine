@@ -39,8 +39,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
                 <Command.Group heading="Navigation" className="text-xs font-semibold text-gray-400 mb-2 px-2">
                   <Command.Item onSelect={() => { navigate('/'); setOpen(false) }} className="px-3 py-2 text-sm text-gray-700 cursor-pointer hover:bg-indigo-50 hover:text-indigo-600 rounded-md">Dashboard</Command.Item>
+                  <Command.Item onSelect={() => { navigate('/what-if'); setOpen(false) }} className="px-3 py-2 text-sm text-gray-700 cursor-pointer hover:bg-indigo-50 hover:text-indigo-600 rounded-md">What-If Life Simulators</Command.Item>
+                  <Command.Item onSelect={() => { navigate('/wealth-engine'); setOpen(false) }} className="px-3 py-2 text-sm text-gray-700 cursor-pointer hover:bg-indigo-50 hover:text-indigo-600 rounded-md">Wealth Engine</Command.Item>
                   <Command.Item onSelect={() => { navigate('/tax-planning'); setOpen(false) }} className="px-3 py-2 text-sm text-gray-700 cursor-pointer hover:bg-indigo-50 hover:text-indigo-600 rounded-md">Tax Planning</Command.Item>
                   <Command.Item onSelect={() => { navigate('/calculators'); setOpen(false) }} className="px-3 py-2 text-sm text-gray-700 cursor-pointer hover:bg-indigo-50 hover:text-indigo-600 rounded-md">Calculators</Command.Item>
+                  <Command.Item onSelect={() => { navigate('/security'); setOpen(false) }} className="px-3 py-2 text-sm text-gray-700 cursor-pointer hover:bg-indigo-50 hover:text-indigo-600 rounded-md">Security &amp; Air-Gap</Command.Item>
                 </Command.Group>
                 
                 <Command.Group heading="Actions" className="text-xs font-semibold text-gray-400 mt-4 mb-2 px-2">

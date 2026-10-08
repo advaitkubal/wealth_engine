@@ -188,6 +188,14 @@ export default function TaxPlanning() {
       }, 400)
       return
     }
+    if (lower.includes('open what if') || lower.includes('what if') || lower.includes('open scenarios') || lower.includes('job switch') || lower.includes('fire') || lower.includes('retirement')) {
+      setTimeout(() => {
+        setThinking(false)
+        setMsgs(m => [...m, { role: 'ai', text: 'Opening What-If Life Decision & Stress Simulators! 🔀' }])
+        navigate('/what-if')
+      }, 400)
+      return
+    }
     if (lower.includes('open dashboard') || lower.includes('go home') || lower.includes('go to today')) {
       setTimeout(() => {
         setThinking(false)

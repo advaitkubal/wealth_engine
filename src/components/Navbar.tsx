@@ -3,11 +3,12 @@ import LogoIcon from './LogoIcon'
 import AirGapIndicator from './AirGapIndicator'
 
 const navLinks = [
+  { label: 'Today',         to: '/'              },
+  { label: 'What-If Engine',to: '/what-if'       },
   { label: 'Tax Planning',  to: '/tax-planning'  },
   { label: 'Wealth Engine', to: '/wealth-engine'  },
   { label: 'Calculators',   to: '/calculators'   },
   { label: 'Security',      to: '/security'      },
-  { label: 'Insights',      to: '/insights'      },
 ]
 
 interface NavbarProps { absolute?: boolean }

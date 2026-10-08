@@ -8,6 +8,7 @@ import Calculators from './pages/Calculators'
 import Security from './pages/Security'
 import Insights from './pages/Insights'
 import TaxRulesStatus from './pages/TaxRulesStatus'
+import WhatIfScenarios from './pages/WhatIfScenarios'
 
 const PageWrapper = ({ children }: { children: React.ReactNode }) => (
   <motion.div
@@ -27,6 +28,7 @@ export default function App() {
         <AnimatePresence mode="wait">
           <Routes>
             <Route path="/"              element={<PageWrapper><Today /></PageWrapper>}          />
+            <Route path="/what-if"       element={<PageWrapper><WhatIfScenarios /></PageWrapper>} />
             <Route path="/tax-planning"  element={<PageWrapper><TaxPlanning /></PageWrapper>}   />
             <Route path="/wealth-engine" element={<PageWrapper><WealthEngine /></PageWrapper>}  />
             <Route path="/calculators"   element={<PageWrapper><Calculators /></PageWrapper>}   />
