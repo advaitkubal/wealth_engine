@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react'
-import Navbar from '../components/Navbar'
 
 /* ── Helpers ── */
 function fmt(n: number) { return `₹${Math.round(n).toLocaleString('en-IN')}` }
 
-function taxSlab(income: number, slabs: { upto: number; rate: number }[]) {
+function taxSlab(income: number, slabs: { upto: number | null; rate: number }[]) {
   if (!slabs || slabs.length === 0) return 0;
   let tax = 0, prev = 0
   for (const s of slabs) {
@@ -230,7 +229,6 @@ export default function Calculators() {
 
   return (
     <div className="min-h-screen bg-[#F5F5F5] flex flex-col">
-      <Navbar />
       <div className="max-w-[88rem] mx-auto w-full px-6 py-10">
         <h1 className="text-4xl md:text-5xl font-medium text-black mb-2" style={{ letterSpacing:'-0.03em' }}>
           Precision Tax &amp; Financial Calculators

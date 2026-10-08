@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
 import { Send, ChevronDown, ChevronUp, Sparkles, Trash2 } from 'lucide-react'
-import Navbar from '../components/Navbar'
 
 interface Msg { role: 'user' | 'ai'; text: string; clauses?: string[]; suggestions?: string[] }
 
@@ -112,6 +111,15 @@ export default function TaxPlanning() {
     setConvId(undefined)
   }
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const initialQ = params.get('q')
+    if (initialQ) {
+      window.history.replaceState({}, '', window.location.pathname)
+      send(initialQ)
+    }
+  }, [])
+
   const send = async (text: string) => {
     if (!text.trim() || thinking) return
     setMsgs(m => [...m, { role: 'user', text }])
@@ -150,7 +158,6 @@ export default function TaxPlanning() {
 
   return (
     <div className="min-h-screen bg-[#F5F5F5] flex flex-col">
-      <Navbar />
       <div className="flex-1 max-w-[88rem] mx-auto w-full px-6 py-10">
 
         {/* Header */}

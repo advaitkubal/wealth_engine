@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip, AreaChart, Area } from 'recharts'
-import { Layout } from '../components/Layout'
+import { ResponsiveContainer, XAxis, YAxis, Tooltip, AreaChart, Area } from 'recharts'
+import { useNavigate } from '../router'
 
 const MOCK_DATA = [
   { name: 'Jan', val: 100 },
@@ -16,6 +16,12 @@ const MOCK_DATA = [
 export default function Today() {
   const [query, setQuery] = useState('')
   const [score, setScore] = useState(850)
+  const navigate = useNavigate()
+
+  const handleAsk = () => {
+    if (!query.trim()) return
+    navigate(`/tax-planning?q=${encodeURIComponent(query.trim())}`)
+  }
 
   useEffect(() => {
     fetch('http://localhost:8000/api/intelligence/halo-score')
@@ -66,7 +72,7 @@ export default function Today() {
                 <YAxis hide domain={['dataMin - 10', 'dataMax + 10']} />
                 <Tooltip 
                   contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                  formatter={(val: number) => [`₹${(val).toLocaleString()}L`, 'Net Worth']}
+                  formatter={(val) => [`₹${Number(val).toLocaleString('en-IN')}L`, 'Net Worth']}
                 />
                 <Area type="monotone" dataKey="val" stroke="#6366f1" strokeWidth={3} fillOpacity={1} fill="url(#colorVal)" />
               </AreaChart>
@@ -112,9 +118,12 @@ export default function Today() {
             className="flex-1 bg-transparent text-slate-900 placeholder-slate-400 outline-none text-base py-3"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') { /* send message to chat */ } }}
+            onKeyDown={(e) => { if (e.key === 'Enter') handleAsk() }}
           />
-          <button className="ml-2 bg-indigo-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium shadow-sm hover:bg-indigo-700 transition-colors">
+          <button 
+            onClick={handleAsk}
+            className="ml-2 bg-indigo-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium shadow-sm hover:bg-indigo-700 transition-colors"
+          >
             Ask Halo
           </button>
         </div>

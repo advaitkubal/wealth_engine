@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api import chat, documents, health, tax, wealth
+from app.api import chat, documents, health, intelligence, tax, wealth
 from app.api import settings as api_settings
 from app.config import settings
 from app.database.database import init_db
@@ -30,6 +30,7 @@ app.include_router(documents.router, prefix="/api")
 app.include_router(chat.router, prefix="/api")
 app.include_router(wealth.router, prefix="/api")
 app.include_router(tax.router, prefix="/api")
+app.include_router(intelligence.router, prefix="/api")
 
 @app.on_event("startup")
 async def startup_event():

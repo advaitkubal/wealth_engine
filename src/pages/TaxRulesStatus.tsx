@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { Layout } from '../components/Layout'
 
 interface TaxRuleItem {
   path: string;
@@ -33,7 +32,7 @@ export default function TaxRulesStatus() {
   }, [])
 
   return (
-    <Layout>
+    <div>
       <div className="max-w-4xl mx-auto py-12 px-4 sm:px-6">
         <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight mb-8">
           Tax Rules Engine Status
@@ -81,6 +80,6 @@ export default function TaxRulesStatus() {
           </div>
         )}
       </div>
-    </Layout>
+    </div>
   )
 }

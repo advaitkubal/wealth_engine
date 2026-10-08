@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Plus, Trash2, TrendingUp, AlertCircle, X, RefreshCw } from 'lucide-react'
-import Navbar from '../components/Navbar'
 import DonutChart from '../components/DonutChart'
 import BarChart from '../components/BarChart'
 
@@ -127,7 +126,6 @@ export default function WealthEngine() {
 
   return (
     <div className="min-h-screen bg-[#F5F5F5] flex flex-col">
-      <Navbar />
       <div className="max-w-[88rem] mx-auto w-full px-6 py-10">
         <div className="flex items-center justify-between mb-2">
           <h1 className="text-4xl md:text-5xl font-medium text-black" style={{ letterSpacing: '-0.03em' }}>Wealth Engine</h1>

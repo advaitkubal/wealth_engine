@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Command } from 'cmdk'
-import { useNavigate, useRouter } from './router'
+import { useNavigate } from './router'
 import Navbar from './components/Navbar'
 
 export default function AppShell({ children }: { children: React.ReactNode }) {

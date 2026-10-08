@@ -1,6 +1,5 @@
 import { ArrowRight, Clock } from 'lucide-react'
 import { Link } from '../router'
-import Navbar from '../components/Navbar'
 
 const ARTICLES = [
   {
@@ -55,7 +54,6 @@ const TAG_COLORS: Record<string, string> = {
 export default function Insights() {
   return (
     <div className="min-h-screen bg-[#F5F5F5] flex flex-col">
-      <Navbar />
 
       {/* Mission hero */}
       <div className="px-6 pt-16 pb-20">

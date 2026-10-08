@@ -1,9 +1,7 @@
-
 import { Router, Routes, Route } from './router'
 import { AnimatePresence, motion } from 'framer-motion'
 import AppShell from './AppShell'
 import Today from './pages/Today'
-import HomePage from './pages/HomePage'
 import TaxPlanning from './pages/TaxPlanning'
 import WealthEngine from './pages/WealthEngine'
 import Calculators from './pages/Calculators'
@@ -22,24 +20,18 @@ const PageWrapper = ({ children }: { children: React.ReactNode }) => (
   </motion.div>
 )
 
-import HomePage    from './pages/HomePage'
-import Calculators  from './pages/Calculators'
-import Security     from './pages/Security'
-import Insights     from './pages/Insights'
-
-
 export default function App() {
   return (
     <Router>
       <AppShell>
         <AnimatePresence mode="wait">
           <Routes>
-            <Route path="/"              element={<PageWrapper><Today /></PageWrapper>}    />
-            <Route path="/tax-planning"  element={<PageWrapper><TaxPlanning /></PageWrapper>} />
-            <Route path="/wealth-engine" element={<PageWrapper><WealthEngine /></PageWrapper>}/>
-            <Route path="/calculators"   element={<PageWrapper><Calculators /></PageWrapper>} />
-            <Route path="/security"      element={<PageWrapper><Security /></PageWrapper>}    />
-            <Route path="/insights"      element={<PageWrapper><Insights /></PageWrapper>}    />
+            <Route path="/"              element={<PageWrapper><Today /></PageWrapper>}          />
+            <Route path="/tax-planning"  element={<PageWrapper><TaxPlanning /></PageWrapper>}   />
+            <Route path="/wealth-engine" element={<PageWrapper><WealthEngine /></PageWrapper>}  />
+            <Route path="/calculators"   element={<PageWrapper><Calculators /></PageWrapper>}   />
+            <Route path="/security"      element={<PageWrapper><Security /></PageWrapper>}       />
+            <Route path="/insights"      element={<PageWrapper><Insights /></PageWrapper>}       />
             <Route path="/tax-rules"     element={<PageWrapper><TaxRulesStatus /></PageWrapper>} />
           </Routes>
         </AnimatePresence>

@@ -12,6 +12,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@heroicons/react": "^2.2.0",
     "cmdk": "^1.1.1",
     "framer-motion": "^14.0.0",
     "lucide-react": "^0.475.0",

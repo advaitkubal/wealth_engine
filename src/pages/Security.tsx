@@ -1,5 +1,4 @@
 import { Shield, Database, EyeOff, Cpu, Lock, Globe, CheckCircle } from 'lucide-react'
-import Navbar from '../components/Navbar'
 
 const ARCH_CARDS = [
   {
@@ -44,7 +43,6 @@ const FAQS = [
 export default function Security() {
   return (
     <div className="min-h-screen bg-[#F5F5F5] flex flex-col">
-      <Navbar />
 
       {/* Hero */}
       <div className="bg-[#2B2644] px-6 py-24">
