@@ -192,8 +192,8 @@ def execute_tools_node(state: GraphState):
             content_to_pass += "\n\n[INSTRUCTION: Present this full breakdown, slice-by-slice calculation, deductions, and total tax payable to the user in a clear table or structured list.]"
         elif tc["name"] == "calculate_loan_and_emi":
             content_to_pass += "\n\n[INSTRUCTION: Present this exact loan analysis to the user: state the Effective Annual Interest Rate (APR), total interest paid, preclosure recommendation, and applicable Indian tax deductions clearly.]"
-        elif tc["name"] in ("add_asset", "add_liability"):
-            content_to_pass += "\n\n[INSTRUCTION: Confirm what was successfully added, mentioning the exact name, amount, and the updated net worth.]"
+        elif tc["name"] in ("add_asset", "add_liability", "update_asset", "update_liability"):
+            content_to_pass += "\n\n[INSTRUCTION: Confirm what was successfully updated/added in the database, mentioning the exact name, amount, and the updated net worth.]"
 
         messages.append({
             "role":         "tool",

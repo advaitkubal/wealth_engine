@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 
 from app.config import settings
 
@@ -90,6 +91,42 @@ class LLMService:
                         "name": tc.function.name,
                         "arguments": args,
                     })
+
+            # Fallback: if model wrote raw JSON tool call into content instead of tool_calls
+            if not tool_calls and content and "{" in content:
+                known_tools = {
+                    "update_liability", "add_liability", "delete_liability",
+                    "update_asset", "add_asset", "delete_asset",
+                    "compute_indian_tax", "calculate_loan_and_emi", "get_portfolio_summary"
+                }
+                start = content.find("{")
+                end = content.rfind("}")
+                if start != -1 and end != -1 and end > start:
+                    raw_json = content[start:end+1]
+                    # Repair common model syntax glitches like "tenure":}} or trailing commas
+                    repaired = re.sub(r':\s*([,}])', r': null\1', raw_json)
+                    repaired = re.sub(r',\s*}', '}', repaired)
+                    try:
+                        parsed = json.loads(repaired)
+                        name = parsed.get("name") or parsed.get("tool")
+                        args = parsed.get("parameters") or parsed.get("arguments") or {}
+                        if isinstance(args, str):
+                            try:
+                                args = json.loads(args)
+                            except Exception:
+                                args = {}
+                        if name in known_tools:
+                            tool_calls.append({
+                                "id": "call_fallback_1",
+                                "name": name,
+                                "arguments": args,
+                            })
+                            # Clear content so raw JSON is not shown to user
+                            content = content[:start].strip() + (" " if content[:start] and content[end+1:] else "") + content[end+1:].strip()
+                            content = content.strip()
+                    except Exception as parse_err:
+                        logger.warning(f"Failed to parse fallback tool JSON: {parse_err}")
+
             return {"content": content, "tool_calls": tool_calls, "raw_message": choice.message}
         except Exception as e:
             logger.error(f"Error in generate_with_tools: {e}")

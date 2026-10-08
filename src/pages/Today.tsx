@@ -3,7 +3,9 @@ import { ResponsiveContainer, XAxis, YAxis, Tooltip, AreaChart, Area } from 'rec
 import { useNavigate } from '../router'
 import VoiceMicButton from '../components/VoiceMicButton'
 import DocumentScanModal from '../components/DocumentScanModal'
+import DebtIngestionModal from '../components/DebtIngestionModal'
 import MoneyFlowVisualizer from '../components/MoneyFlowVisualizer'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
   Upload,
   RefreshCw,
@@ -16,7 +18,8 @@ import {
   CheckCircle2,
   Send,
   X,
-  Trash2
+  Trash2,
+  Plus
 } from 'lucide-react'
 
 const MOCK_DATA = [
@@ -79,7 +82,7 @@ export default function Today() {
   const [taxCompliance, setTaxCompliance] = useState<TaxComplianceStatus | null>(null)
   const [selectedFy, setSelectedFy] = useState<string>('2024-25')
   const [isScanOpen, setIsScanOpen] = useState(false)
-  const [cibilSyncing, setCibilSyncing] = useState(false)
+  const [isDebtModalOpen, setIsDebtModalOpen] = useState(false)
   const [cibilMsg, setCibilMsg] = useState<string | null>(null)
 
   // Interactive Future-Self Time Machine Age State
@@ -225,21 +228,6 @@ export default function Today() {
     setQuery(text)
   }
 
-  const handleSyncCIBIL = async () => {
-    setCibilSyncing(true)
-    setCibilMsg(null)
-    try {
-      const res = await fetch('http://localhost:8000/api/wealth/import-cibil', { method: 'POST' })
-      const data = await res.json()
-      setCibilMsg(data.message)
-      fetchSummary()
-    } catch (e) {
-      setCibilMsg('Failed to sync CIBIL report.')
-    } finally {
-      setCibilSyncing(false)
-    }
-  }
-
   const fmtCr = (val: number) => {
     if (!val) return '₹0'
     const cr = val / 10000000
@@ -273,13 +261,12 @@ export default function Today() {
 
         <div className="flex flex-wrap items-center gap-3">
           <button
-            onClick={handleSyncCIBIL}
-            disabled={cibilSyncing}
-            className="bg-emerald-50 text-emerald-700 border border-emerald-200/80 hover:bg-emerald-100 rounded-full px-4 py-2 text-xs font-semibold flex items-center gap-2 transition-colors shadow-sm disabled:opacity-50"
-            title="Auto-sync loans from CIBIL/Experian without manual typing"
+            onClick={() => setIsDebtModalOpen(true)}
+            className="bg-emerald-50 text-emerald-700 border border-emerald-200/80 hover:bg-emerald-100 rounded-full px-4 py-2 text-xs font-semibold flex items-center gap-2 transition-colors shadow-sm"
+            title="Auto-sync loans from CIBIL/Experian & Account Aggregator without manual typing"
           >
             <CreditCard className="w-3.5 h-3.5 text-emerald-600" />
-            {cibilSyncing ? 'Syncing Bureau...' : 'Auto-Sync CIBIL Loans'}
+            <span>Link Loans (CIBIL / AA Sync)</span>
           </button>
 
           <button
@@ -438,13 +425,21 @@ export default function Today() {
 
           <div className="space-y-2.5 pt-3 border-t border-gray-100">
             {/* Regime recommendation pill */}
-            <div className="bg-emerald-50/80 border border-emerald-100 rounded-xl px-3 py-1.5 flex items-center justify-between text-xs">
-              <span className="text-emerald-800 font-semibold truncate">
-                {taxCompliance?.recommended_regime || 'New Regime (Budget 2024)'}
-              </span>
-              <span className="text-emerald-700 font-extrabold text-[11px] shrink-0 ml-2">
-                Save ₹{((taxCompliance?.old_regime_tax || 530400) - (taxCompliance?.new_regime_tax || 292500)).toLocaleString('en-IN')}
-              </span>
+            <div className="bg-emerald-50/90 border border-emerald-200/70 rounded-xl p-2.5 flex items-center justify-between gap-2 text-xs">
+              <div className="min-w-0">
+                <span className="text-[10px] uppercase font-bold text-emerald-600 block tracking-wider leading-none">
+                  Recommended
+                </span>
+                <span className="text-emerald-950 font-bold text-xs truncate block mt-0.5">
+                  {taxCompliance?.recommended_regime || 'New Regime (Budget 2024)'}
+                </span>
+              </div>
+              <div className="text-right shrink-0 bg-emerald-100/80 px-2.5 py-1 rounded-lg">
+                <span className="text-[10px] text-emerald-700 block font-medium leading-none">Saves</span>
+                <span className="text-emerald-900 font-black text-xs">
+                  ₹{((taxCompliance?.old_regime_tax || 530400) - (taxCompliance?.new_regime_tax || 292500)).toLocaleString('en-IN')}
+                </span>
+              </div>
             </div>
 
             <div className="w-full bg-slate-50 border border-slate-100 rounded-xl p-2.5 flex justify-between items-center text-xs">
@@ -627,41 +622,56 @@ export default function Today() {
 
       </div>
 
-        {/* Right Side Chat Panel on Today's Page */}
-        {isChatOpen && (
-          <div className="w-full lg:w-[420px] xl:w-[460px] shrink-0 sticky top-20 bg-white rounded-3xl border border-slate-200 shadow-2xl flex flex-col h-[calc(100vh-6rem)] overflow-hidden transition-all duration-300 z-30">
-            {/* Header */}
-            <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white text-sm font-bold shadow-sm">
-                  ✨
+        {/* Right Side Chat Panel on Today's Page with Smooth Animation */}
+        <AnimatePresence>
+          {isChatOpen && (
+            <motion.div
+              initial={{ opacity: 0, x: 40, scale: 0.98 }}
+              animate={{ opacity: 1, x: 0, scale: 1 }}
+              exit={{ opacity: 0, x: 40, scale: 0.98 }}
+              transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+              className="w-full lg:w-[420px] xl:w-[460px] shrink-0 sticky top-20 bg-white rounded-3xl border border-slate-200 shadow-2xl flex flex-col h-[calc(100vh-6rem)] overflow-hidden z-30"
+            >
+              {/* Header */}
+              <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white text-sm font-bold shadow-sm">
+                    ✨
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900 leading-tight">Halo AI Copilot</h3>
+                    <p className="text-[10px] text-emerald-600 font-medium flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                      100% on-device • Live DB execution
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900 leading-tight">Halo AI Copilot</h3>
-                  <p className="text-[10px] text-emerald-600 font-medium flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                    100% on-device • Live DB execution
-                  </p>
-                </div>
-              </div>
 
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={clearChat}
-                  className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors"
-                  title="Clear conversation"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => setIsChatOpen(false)}
-                  className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors"
-                  title="Close side chat"
-                >
-                  <X className="w-4 h-4" />
-                </button>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={clearChat}
+                    className="px-2.5 py-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-xl transition-all flex items-center gap-1 shadow-2xs"
+                    title="Start a new conversation"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>New Chat</span>
+                  </button>
+                  <button
+                    onClick={clearChat}
+                    className="p-1.5 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition-colors"
+                    title="Clear messages"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => setIsChatOpen(false)}
+                    className="p-1.5 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition-colors"
+                    title="Close side chat"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
-            </div>
 
             {/* Conversation Messages */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -754,7 +764,16 @@ export default function Today() {
                   placeholder="Ask or update (e.g. 'change homeloan to 40L', 'add 10L cash')..."
                   className="flex-1 bg-transparent text-xs text-slate-900 placeholder-slate-400 outline-none p-2 resize-none max-h-32 min-h-[36px]"
                 />
-                <VoiceMicButton onTranscript={t => setSideInput(t)} />
+                <VoiceMicButton
+                  onTranscript={t => setSideInput(t)}
+                  onAutoSend={t => {
+                    const toSend = t || sideInput.trim()
+                    if (toSend) {
+                      sendMsg(toSend)
+                      setSideInput('')
+                    }
+                  }}
+                />
                 <button
                   onClick={() => {
                     if (sideInput.trim()) {
@@ -769,8 +788,9 @@ export default function Today() {
                 </button>
               </div>
             </div>
-          </div>
-        )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Floating Copilot Toggle Badge (when closed) */}
@@ -808,7 +828,16 @@ export default function Today() {
             />
 
             <div className="flex items-center gap-1.5 shrink-0 mb-0.5">
-              <VoiceMicButton onTranscript={handleVoiceTranscript} />
+              <VoiceMicButton
+                onTranscript={handleVoiceTranscript}
+                onAutoSend={t => {
+                  const toSend = t || query.trim()
+                  if (toSend) {
+                    setQuery('')
+                    sendMsg(toSend)
+                  }
+                }}
+              />
               <button
                 onClick={handleAsk}
                 disabled={!query.trim()}
@@ -827,6 +856,15 @@ export default function Today() {
         onClose={() => setIsScanOpen(false)}
         onSuccess={() => {
           setIsScanOpen(false)
+          fetchSummary()
+        }}
+      />
+
+      <DebtIngestionModal
+        isOpen={isDebtModalOpen}
+        onClose={() => setIsDebtModalOpen(false)}
+        onSuccess={() => {
+          setIsDebtModalOpen(false)
           fetchSummary()
         }}
       />
