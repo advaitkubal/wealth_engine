@@ -81,10 +81,39 @@ export default function DocumentScanModal({ isOpen, onClose, onSuccess }: Docume
           <X className="w-5 h-5" />
         </button>
 
-        <h2 className="text-2xl font-bold text-slate-900 tracking-tight mb-2">Scan & Import Financial Documents</h2>
-        <p className="text-sm text-slate-500 mb-6">
-          Drop your CAS PDF, Form 16, Bank Statement CSV/PDF, or AIS/TIS JSON. Processing is 100% on-device and private.
+        <h2 className="text-2xl font-bold text-slate-900 tracking-tight mb-2">Scan &amp; Import Financial Documents</h2>
+        <p className="text-sm text-slate-500 mb-4">
+          Drop your CAS PDF, Form 16, CIBIL/Experian Credit Report, or Bank Statement. Processing is 100% on-device and private.
         </p>
+
+        {/* Quick Debt Bureau Sync Action */}
+        <div className="mb-5 p-4 rounded-2xl bg-emerald-50 border border-emerald-200/80 flex items-center justify-between">
+          <div>
+            <p className="text-xs font-bold text-emerald-900">Have a CIBIL / Experian Credit Report?</p>
+            <p className="text-[11px] text-emerald-700">Auto-detect all home, car, and personal loans without manual typing.</p>
+          </div>
+          <button
+            type="button"
+            onClick={async () => {
+              setUploading(true)
+              try {
+                const res = await fetch('http://localhost:8000/api/wealth/import-cibil', { method: 'POST' })
+                const data = await res.json()
+                setMessage(data.message)
+                window.dispatchEvent(new CustomEvent('halo:wealth_updated'))
+                if (onSuccess) onSuccess()
+              } catch (e: any) {
+                setIsError(true)
+                setMessage('Error importing credit report.')
+              } finally {
+                setUploading(false)
+              }
+            }}
+            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shrink-0 shadow-xs transition-colors"
+          >
+            Auto-Sync Loans
+          </button>
+        </div>
 
         <div
           onDragOver={handleDragOver}
