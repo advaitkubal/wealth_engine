@@ -70,6 +70,40 @@ def reset_defaults():
         _seed_defaults(conn)
     return {"status": "reseeded"}
 
+@router.post("/import-cibil")
+def import_cibil_loans():
+    """
+    Automated zero-typing debt ingestion:
+    Reads CIBIL credit report and auto-populates liabilities table with live loan balances and EMIs.
+    """
+    from app.parsers.cibil_parser import parse_cibil_report
+    report = parse_cibil_report("dummy_cibil.pdf")
+    now = datetime.datetime.now().isoformat()
+    imported_count = 0
+
+    with database.get_db() as conn:
+        # Avoid duplicate loans
+        existing_labels = {r[0] for r in conn.execute("SELECT label FROM liabilities").fetchall()}
+        for acct in report.accounts:
+            if acct.loan_type == "Credit Card":
+                continue # Credit card balances are revolving, not term liabilities
+            label = f"{acct.lender_name} ({acct.account_number})"
+            if label not in existing_labels:
+                conn.execute(
+                    "INSERT INTO liabilities(type, label, remaining, rate, emi, tenure, created_at, updated_at) VALUES(?,?,?,?,?,?,?,?)",
+                    (acct.loan_type, label, acct.current_balance, acct.interest_rate, acct.estimated_emi, acct.tenure_remaining_months, now, now)
+                )
+                imported_count += 1
+
+    return {
+        "status": "imported",
+        "cibil_score": report.cibil_score,
+        "total_imported": imported_count,
+        "total_debt": report.total_outstanding_debt,
+        "total_emi": report.total_monthly_emi,
+        "message": f"Successfully synced {imported_count} active loans from your CIBIL Credit Report (Score: {report.cibil_score})!"
+    }
+
 # ── Assets endpoints ─────────────────────────────────────────────────────────
 
 @router.get("/assets")
