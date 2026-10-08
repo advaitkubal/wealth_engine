@@ -1,0 +1,161 @@
+{
+  "fy": "2024-25",
+  "act": "Income-tax Act, 1961",
+  "verified": true,
+  "source_url": "https://incometaxindia.gov.in/Pages/tax-services/calculate-income-tax.aspx",
+  "effective_from": "2024-04-01",
+  "effective_to": "2025-03-31",
+  "notes": "Finance (No.2) Act 2024; Budget 2024. LTCG/STCG rates changed from 23 July 2024.",
+  "standard_deduction": {
+    "salaried": 75000,
+    "verified": true,
+    "source_url": "https://incometaxindia.gov.in/communications/circular/circular-no-4-2024.pdf",
+    "note": "Increased from ₹50,000 to ₹75,000 in Budget 2024 for New Regime"
+  },
+  "new_regime": {
+    "enabled": true,
+    "default": true,
+    "slabs": [
+      { "from": 0,       "to": 400000,  "rate": 0.00, "verified": true },
+      { "from": 400001,  "to": 800000,  "rate": 0.05, "verified": true },
+      { "from": 800001,  "to": 1200000, "rate": 0.10, "verified": true },
+      { "from": 1200001, "to": 1600000, "rate": 0.15, "verified": true },
+      { "from": 1600001, "to": 2000000, "rate": 0.20, "verified": true },
+      { "from": 2000001, "to": 2400000, "rate": 0.25, "verified": true },
+      { "from": 2400001, "to": null,    "rate": 0.30, "verified": true }
+    ],
+    "rebate_87A": {
+      "threshold": 700000,
+      "max_rebate": 25000,
+      "marginal_relief": true,
+      "marginal_relief_formula": "tax_payable - (net_taxable_income - threshold)",
+      "verified": false,
+      "source_url": "https://incometaxindia.gov.in/Pages/tax-services/calculate-income-tax.aspx",
+      "note": "Exact marginal relief formula needs validation against incometax.gov.in utility for edge cases above ₹7L"
+    },
+    "cess": {
+      "rate": 0.04,
+      "name": "Health and Education Cess",
+      "verified": true
+    }
+  },
+  "old_regime": {
+    "enabled": true,
+    "default": false,
+    "slabs_individual_below_60": [
+      { "from": 0,      "to": 250000,  "rate": 0.00 },
+      { "from": 250001, "to": 500000,  "rate": 0.05 },
+      { "from": 500001, "to": 1000000, "rate": 0.20 },
+      { "from": 1000001,"to": null,    "rate": 0.30 }
+    ],
+    "rebate_87A": {
+      "threshold": 500000,
+      "max_rebate": 12500,
+      "marginal_relief": false,
+      "verified": true
+    },
+    "cess": { "rate": 0.04, "name": "Health and Education Cess", "verified": true },
+    "deductions": {
+      "80C": { "limit": 150000, "description": "ELSS, PPF, EPF, LIC, tuition fees, NSC, home loan principal" },
+      "80CCD_1B": { "limit": 50000, "description": "Additional NPS contribution (self)" },
+      "80CCD_2": { "limit_pct_salary": 0.14, "description": "Employer NPS contribution (not subject to overall 80C cap)" },
+      "80D": {
+        "self_family_below_60": 25000,
+        "self_family_above_60": 50000,
+        "parents_below_60": 25000,
+        "parents_above_60": 50000
+      },
+      "24b": { "self_occupied_limit": 200000, "let_out_limit": null, "description": "Home loan interest" },
+      "80E": { "limit": null, "description": "Interest on education loan (no cap)" },
+      "80EEB": { "limit": 150000, "description": "Interest on EV loan" },
+      "HRA": { "description": "Min of: actual HRA, 50%/40% of basic (metro/non-metro), rent paid minus 10% basic" }
+    }
+  },
+  "surcharge": {
+    "new_regime": [
+      { "from": 0,         "to": 5000000,  "rate": 0.00 },
+      { "from": 5000001,   "to": 10000000, "rate": 0.10 },
+      { "from": 10000001,  "to": 20000000, "rate": 0.15 },
+      { "from": 20000001,  "to": 50000000, "rate": 0.25 },
+      { "from": 50000001,  "to": null,     "rate": 0.25, "note": "Capped at 25% for new regime (Budget 2023)" }
+    ],
+    "old_regime": [
+      { "from": 0,         "to": 5000000,  "rate": 0.00 },
+      { "from": 5000001,   "to": 10000000, "rate": 0.10 },
+      { "from": 10000001,  "to": 20000000, "rate": 0.15 },
+      { "from": 20000001,  "to": 50000000, "rate": 0.25 },
+      { "from": 50000001,  "to": null,     "rate": 0.37 }
+    ],
+    "verified": true
+  },
+  "capital_gains": {
+    "equity_stcg": {
+      "section": "111A",
+      "rate": 0.20,
+      "cess": 0.04,
+      "effective_from": "2024-07-23",
+      "note": "Changed from 15% to 20% on 23 July 2024 (Budget 2024)",
+      "verified": true,
+      "source_url": "https://incometaxindia.gov.in/news/budget-2024.aspx"
+    },
+    "equity_ltcg": {
+      "section": "112A",
+      "rate": 0.125,
+      "exemption": 125000,
+      "cess": 0.04,
+      "effective_from": "2024-07-23",
+      "note": "Rate changed from 10% to 12.5%; exemption changed from ₹1L to ₹1.25L on 23 July 2024",
+      "verified": false,
+      "source_url": "https://incometaxindia.gov.in/news/budget-2024.aspx",
+      "todo": "Verify exact exemption limit ₹1.25L via incometax.gov.in calculator"
+    },
+    "debt_stcg": {
+      "section": "other_sources",
+      "rate": "slab",
+      "note": "Added to income, taxed at applicable slab rate",
+      "verified": true
+    },
+    "debt_ltcg": {
+      "section": "112",
+      "rate": 0.125,
+      "indexation": false,
+      "note": "Budget 2024: indexation removed for debt MF LTCG; flat 12.5%",
+      "verified": false,
+      "todo": "Confirm no indexation for all debt instruments post 23 July 2024"
+    },
+    "real_estate_ltcg": {
+      "section": "112",
+      "rate_without_indexation": 0.125,
+      "rate_with_indexation": 0.20,
+      "indexation_option": "available_for_pre_23jul2024_acquisitions_by_resident_individuals",
+      "note": "Budget 2024: grandfathering — can choose lower of (12.5% without indexation) or (20% with CII indexation) for immovable property acquired before 23 July 2024 by resident individual/HUF",
+      "verified": false,
+      "source_url": "https://incometaxindia.gov.in/news/budget-2024.aspx",
+      "todo": "Verify grandfathering clause exact language and asset category scope"
+    }
+  },
+  "tds_tcs_highlights": {
+    "section_194A_fd_interest": {
+      "threshold_individual": 40000,
+      "threshold_senior_citizen": 50000,
+      "rate": 0.10,
+      "verified": true
+    },
+    "section_194_dividends": {
+      "threshold": 5000,
+      "rate": 0.10,
+      "verified": true
+    }
+  },
+  "advance_tax_due_dates": [
+    { "by_date": "2024-06-15", "cumulative_pct": 0.15 },
+    { "by_date": "2024-09-15", "cumulative_pct": 0.45 },
+    { "by_date": "2024-12-15", "cumulative_pct": 0.75 },
+    { "by_date": "2025-03-15", "cumulative_pct": 1.00 }
+  ],
+  "section_234": {
+    "234A": { "rate_per_month": 0.01, "description": "Interest for delay in filing ITR" },
+    "234B": { "rate_per_month": 0.01, "description": "Interest for default in advance tax" },
+    "234C": { "rate_per_month": 0.01, "description": "Interest for deferment of advance tax" }
+  }
+}

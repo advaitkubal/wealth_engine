@@ -1,0 +1,32 @@
+{
+  "fy": "2026-27",
+  "act": "Income-tax Act, 2025",
+  "verified": false,
+  "source_url": "",
+  "effective_from": "2026-04-01",
+  "effective_to": "2027-03-31",
+  "notes": "Income-tax Act, 2025 takes effect 1 April 2026. Section numbering changes from 1961 Act. ALL values unverified — DO NOT use for production calculations. A section-mapping layer (rules/section_map.json) is needed before this file is usable.",
+  "todo": "1. Map 1961 Act section numbers to 2025 Act equivalents. 2. Confirm slabs, rates, deductions from gazette of Finance Act 2026 when available. 3. Set verified=true only after cross-check with incometax.gov.in.",
+  "section_mapping_note": "Use rules/section_map.json for 1961→2025 Act section lookups. Do NOT hardcode section numbers from 2025 Act without verification.",
+  "standard_deduction": {
+    "salaried": 75000,
+    "verified": false,
+    "note": "Assumed unchanged; verify after Finance Act 2026"
+  },
+  "new_regime": {
+    "enabled": true,
+    "default": true,
+    "slabs": "UNVERIFIED — see fy_2025_26.json for current best guess; may change under 2025 Act",
+    "rebate_87A": {
+      "threshold": 1200000,
+      "max_rebate": 60000,
+      "verified": false,
+      "note": "Placeholder from FY 2025-26; verify after Finance Act 2026 gazette"
+    },
+    "cess": { "rate": 0.04, "verified": false }
+  },
+  "capital_gains": {
+    "note": "Assumed same as FY 2025-26 until Finance Act 2026 gazette is available",
+    "verified": false
+  }
+}

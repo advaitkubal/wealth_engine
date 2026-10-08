@@ -1,50 +1,32 @@
 import { useState, useRef, useEffect } from 'react'
-import { Send, ChevronDown, ChevronUp, Sparkles } from 'lucide-react'
+import { Send, ChevronDown, ChevronUp, Sparkles, Trash2 } from 'lucide-react'
 import Navbar from '../components/Navbar'
 
 interface Msg { role: 'user' | 'ai'; text: string; clauses?: string[]; suggestions?: string[] }
 
+const STORAGE_KEY_MSGS = 'halo_chat_msgs'
+const STORAGE_KEY_CONV = 'halo_chat_conv_id'
+
 const QUICK = [
-  { label: 'Optimize Section 80C',              q: 'How do I maximize my Section 80C deductions for FY 2024-25?' },
-  { label: 'LTCG on Equity vs Debt',            q: 'What is the LTCG tax difference between equity and debt mutual funds?' },
-  { label: 'Old vs New Tax Regime',             q: 'Compare old vs new tax regime for a ₹15L salary with standard deductions.' },
-  { label: 'Tax Loss Harvesting Rules',         q: 'Explain the rules for tax loss harvesting in Indian equity markets.' },
+  { label: 'My Net Worth',                    q: 'What is my current net worth?' },
+  { label: 'Optimize Section 80C',            q: 'How do I maximize my Section 80C deductions?' },
+  { label: 'Should I pay off my loan early?', q: 'Should I prepay my home loan or invest that money?' },
+  { label: 'Old vs New Tax Regime',           q: 'Which tax regime is better for me?' },
 ]
 
-const AI_RESPONSES: Record<string, { text: string; clauses: string[]; suggestions: string[] }> = {
-  '80c': {
-    text: `**Section 80C — Maximum Deduction: ₹1,50,000**\n\nHere are the most efficient instruments to exhaust your 80C limit:\n\n• **ELSS Mutual Funds** — 3-year lock-in, equity-linked returns (historically 12–15% p.a.)\n• **PPF (Public Provident Fund)** — 7.1% p.a., 15-year tenure, completely tax-free on maturity\n• **NPS Tier-I** — Additional ₹50,000 deduction under **Section 80CCD(1B)** over and above 80C\n• **Life Insurance Premiums** — Eligible if premium ≤ 10% of sum assured\n• **Principal repayment on Home Loan** — Counts toward 80C limit\n\n**Pro tip:** ELSS + NPS is the most tax-efficient combination if you have a long investment horizon.`,
-    clauses: ['Section 80C', 'Section 80CCD(1B)', 'Section 10(38)'],
-    suggestions: ['How does ELSS compare to PPF?', 'Is NPS better than EPF?', 'Calculate my 80C gap'],
-  },
-  'ltcg': {
-    text: `**LTCG Tax: Equity vs Debt Mutual Funds (FY 2024-25)**\n\n**Equity Mutual Funds (held > 1 year):**\n• LTCG rate: **12.5%** (Budget 2024 revision from 10%)\n• Exemption: First **₹1.25 lakh** of gains per FY is tax-free\n• No indexation benefit\n\n**Debt Mutual Funds (purchased after 1 Apr 2023):**\n• Treated as **Short-Term Capital Gains** regardless of holding period\n• Taxed at your **applicable income tax slab rate**\n• Budget 2023 removed the beneficial LTCG+indexation treatment\n\n**Conclusion:** Debt MFs now lose their tax advantage. For tax efficiency, prefer equity MFs, direct bonds, or FDs within lower tax brackets.`,
-    clauses: ['Section 112A', 'Section 50AA', 'Finance Act 2023'],
-    suggestions: ['What about ELSS LTCG?', 'Tax on international fund LTCG?', 'Optimize with tax loss harvesting'],
-  },
-  'regime': {
-    text: `**Old vs New Tax Regime — ₹15L Gross Salary**\n\n**Old Regime (with deductions):**\n| Deduction | Amount |\n|---|---|\n| Standard Deduction | ₹50,000 |\n| Section 80C | ₹1,50,000 |\n| Section 80D | ₹25,000 |\n| HRA (assumed) | ₹1,20,000 |\n| **Taxable Income** | **₹11,55,000** |\n| **Tax Liability** | **~₹1,67,400** |\n\n**New Regime (FY 2024-25):**\n| Slab | Rate |\n|---|---|\n| Up to ₹3L | 0% |\n| ₹3L–₹7L | 5% |\n| ₹7L–₹10L | 10% |\n| ₹10L–₹12L | 15% |\n| ₹12L–₹15L | 20% |\n| Standard Deduction | ₹75,000 |\n| **Taxable Income** | **₹14,25,000** |\n| **Tax Liability** | **~₹1,70,000** |\n\n**Verdict:** At ₹15L with high deductions, both regimes are nearly equal. Use our Calculators page for precise comparison.`,
-    clauses: ['Section 115BAC', 'Finance Act 2024', 'Section 87A Rebate'],
-    suggestions: ['At what income does new regime win?', 'Does HRA change the calculation?', 'Open Tax Regime Calculator'],
-  },
-  'harvesting': {
-    text: `**Tax Loss Harvesting in Indian Equity Markets**\n\nTax loss harvesting lets you **offset capital gains with losses** to reduce your tax liability.\n\n**Rules:**\n• **Short-term losses** can offset both STCG and LTCG\n• **Long-term losses** can only offset LTCG (not STCG)\n• Losses can be **carried forward for 8 assessment years**\n• Must file ITR within the due date to carry forward losses\n\n**Wash Sale Rule:** India has **no wash sale rule** unlike the US — you can sell and immediately repurchase the same security.\n\n**Best Window:** Do this in **February–March** before the financial year ends. Book losses in underperforming stocks, reinvest, and reset your cost basis.\n\n**Example:** ₹2L LTCG on NIFTY ETF + ₹80K LTCG loss on a small-cap stock = Net taxable LTCG of ₹1.2L (within the ₹1.25L exemption — **zero tax!**)`,
-    clauses: ['Section 70', 'Section 74', 'Section 112A'],
-    suggestions: ['Identify harvesting opportunities', 'How to report losses in ITR?', 'Carry-forward loss rules'],
-  },
+const WELCOME: Msg = {
+  role: 'ai',
+  text: `Hi! I'm Halo, your AI wealth advisor 👋\n\nI have access to your live portfolio and can help with tax planning, investments, loans, and more. What's on your mind?`,
+  clauses: [],
+  suggestions: ['My Net Worth', 'Optimize Section 80C', 'Should I pay off my loan early?'],
 }
 
-function pickResponse(q: string) {
-  const l = q.toLowerCase()
-  if (l.includes('80c') || l.includes('elss') || l.includes('ppf')) return AI_RESPONSES['80c']
-  if (l.includes('ltcg') || l.includes('debt') || l.includes('equity')) return AI_RESPONSES['ltcg']
-  if (l.includes('regime') || l.includes('old') || l.includes('new')) return AI_RESPONSES['regime']
-  if (l.includes('harvest') || l.includes('loss')) return AI_RESPONSES['harvesting']
-  return {
-    text: `I'm your **AI Tax Advisor**, trained on the Indian Income Tax Act and SEBI guidelines.\n\nI can help you with:\n• Section 80C/80D optimization\n• LTCG/STCG capital gains computation\n• Old vs New tax regime comparison\n• Tax loss harvesting strategies\n• ITR filing guidance\n\nTry one of the quick topics on the left, or ask me a specific question about your tax situation.`,
-    clauses: [],
-    suggestions: ['Optimize Section 80C', 'Old vs New Regime', 'Explain LTCG rules'],
-  }
+function loadMsgs(): Msg[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_MSGS)
+    if (raw) return JSON.parse(raw)
+  } catch {}
+  return [WELCOME]
 }
 
 function ClauseTag({ label }: { label: string }) {
@@ -68,19 +50,20 @@ function AiCard({ msg, onSuggest }: { msg: Msg; onSuggest: (s: string) => void }
       </div>
       <div className="flex-1 max-w-2xl">
         <div className="bg-white rounded-2xl rounded-tl-sm px-5 py-4 shadow-sm border border-gray-100">
-          <div className="prose prose-sm max-w-none text-black/80 text-sm leading-relaxed whitespace-pre-line">
+          <div className="prose prose-sm max-w-none text-black/80 text-sm leading-relaxed">
             {msg.text.split('\n').map((line, i) => {
               if (line.startsWith('**') && line.endsWith('**'))
                 return <p key={i} className="font-semibold text-black mb-1">{line.replace(/\*\*/g, '')}</p>
-              if (line.startsWith('• '))
-                return <p key={i} className="pl-3 mb-0.5 text-black/70">• {line.slice(2).replace(/\*\*/g, (_, __, s: string) => s)}</p>
+              if (line.startsWith('• ') || line.startsWith('- ') || line.startsWith('* '))
+                return <p key={i} className="pl-3 mb-0.5 text-black/70">• {line.slice(2).replace(/\*\*/g, '')}</p>
               if (line.startsWith('|')) return null
+              if (line.trim() === '') return <br key={i} />
               return <p key={i} className="mb-1 text-black/70">{line.replace(/\*\*/g, '')}</p>
             })}
           </div>
           {msg.clauses && msg.clauses.length > 0 && (
             <div className="mt-3 pt-3 border-t border-gray-100">
-              <p className="text-xs text-black/40 mb-2">Tax clause references</p>
+              <p className="text-xs text-black/40 mb-2">References</p>
               <div className="flex flex-wrap gap-2">{msg.clauses.map(c => <ClauseTag key={c} label={c} />)}</div>
             </div>
           )}
@@ -101,45 +84,93 @@ function AiCard({ msg, onSuggest }: { msg: Msg; onSuggest: (s: string) => void }
 }
 
 export default function TaxPlanning() {
-  const [msgs, setMsgs] = useState<Msg[]>([{
-    role: 'ai',
-    text: `Welcome! I'm your **AI Tax Advisor**, trained on the Indian Income Tax Act, Budget 2024 updates, and ITD circulars.\n\nAll processing happens entirely on your device — zero data leaves your browser.\n\nAsk me anything about Indian tax planning, or pick a quick topic from the sidebar.`,
-    clauses: [],
-    suggestions: ['Optimize Section 80C', 'LTCG on Equity vs Debt', 'Old vs New Regime'],
-  }])
-  const [input, setInput] = useState('')
+  const [msgs, setMsgs]       = useState<Msg[]>(loadMsgs)
+  const [convId, setConvId]   = useState<string | undefined>(
+    () => localStorage.getItem(STORAGE_KEY_CONV) || undefined
+  )
+  const [input, setInput]     = useState('')
   const [thinking, setThinking] = useState(false)
-  const bottomRef = useRef<HTMLDivElement>(null)
+  const bottomRef             = useRef<HTMLDivElement>(null)
 
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [msgs, thinking])
+  // Persist to localStorage on every change
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY_MSGS, JSON.stringify(msgs))
+  }, [msgs])
 
-  const send = (text: string) => {
+  useEffect(() => {
+    if (convId) localStorage.setItem(STORAGE_KEY_CONV, convId)
+  }, [convId])
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [msgs, thinking])
+
+  const clearChat = () => {
+    localStorage.removeItem(STORAGE_KEY_MSGS)
+    localStorage.removeItem(STORAGE_KEY_CONV)
+    setMsgs([WELCOME])
+    setConvId(undefined)
+  }
+
+  const send = async (text: string) => {
     if (!text.trim() || thinking) return
     setMsgs(m => [...m, { role: 'user', text }])
     setInput('')
     setThinking(true)
-    setTimeout(() => {
-      const resp = pickResponse(text)
-      setMsgs(m => [...m, { role: 'ai', ...resp }])
+
+    try {
+      const response = await fetch('http://localhost:8000/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: text, conversation_id: convId }),
+      })
+
+      const data = await response.json()
+      if (data.conversation_id) setConvId(data.conversation_id)
+
+      const citations = (data.sources ?? []).map((s: any) =>
+        s.page ? `${s.document} (p. ${s.page})` : s.document
+      )
+      const unique = Array.from(new Set(citations)) as string[]
+
+      setMsgs(m => [...m, {
+        role: 'ai',
+        text: data.answer || "Sorry, I couldn't generate a response.",
+        clauses: unique,
+      }])
+    } catch {
+      setMsgs(m => [...m, {
+        role: 'ai',
+        text: 'Error connecting to the AI backend. Please ensure the backend server is running.',
+      }])
+    } finally {
       setThinking(false)
-    }, 1200)
+    }
   }
 
   return (
     <div className="min-h-screen bg-[#F5F5F5] flex flex-col">
       <Navbar />
       <div className="flex-1 max-w-[88rem] mx-auto w-full px-6 py-10">
-        {/* Page header */}
-        <div className="mb-8">
-          <h1 className="text-4xl md:text-5xl font-medium text-black mb-3" style={{ letterSpacing: '-0.03em' }}>
-            AI Tax Advisor
-          </h1>
-          <p className="text-black/60 text-base max-w-xl leading-relaxed" style={{ fontFamily: "'Inter', sans-serif" }}>
-            Trained on the Indian Income Tax Act, Budget updates, and ITD circulars. Zero data leaves your device.
-          </p>
+
+        {/* Header */}
+        <div className="flex items-start justify-between mb-8">
+          <div>
+            <h1 className="text-4xl md:text-5xl font-medium text-black mb-3" style={{ letterSpacing: '-0.03em' }}>
+              AI Wealth Advisor
+            </h1>
+            <p className="text-black/60 text-base max-w-xl leading-relaxed" style={{ fontFamily: "'Inter', sans-serif" }}>
+              Connected to your live portfolio. Trained on Indian tax codes and finance. 100% on-device.
+            </p>
+          </div>
+          <button onClick={clearChat}
+            className="inline-flex items-center gap-2 text-sm text-black/40 hover:text-red-500 transition-colors mt-2 shrink-0">
+            <Trash2 className="w-4 h-4" /> New Chat
+          </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-[260px_1fr] gap-6 h-[70vh]">
+        <div className="grid grid-cols-1 md:grid-cols-[240px_1fr] gap-6 h-[70vh]">
+
           {/* Sidebar */}
           <div className="flex flex-col gap-3">
             <p className="text-xs font-medium text-black/40 uppercase tracking-widest mb-1">Quick Topics</p>
@@ -151,11 +182,11 @@ export default function TaxPlanning() {
             ))}
             <div className="mt-auto p-4 bg-[#2B2644] rounded-2xl text-white/60 text-xs leading-relaxed">
               <Sparkles className="w-4 h-4 text-white/80 mb-2" />
-              100% on-device AI. Your queries and financial data never leave this browser session.
+              100% on-device AI. Your data never leaves this device.
             </div>
           </div>
 
-          {/* Chat */}
+          {/* Chat window */}
           <div className="flex flex-col bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
             <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-5">
               {msgs.map((m, i) =>
@@ -191,7 +222,7 @@ export default function TaxPlanning() {
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && send(input)}
-                placeholder="Ask anything about Indian tax codes or paste your portfolio summary..."
+                placeholder="Ask about your portfolio, tax codes, investments..."
                 className="flex-1 text-sm bg-[#F5F5F5] rounded-xl px-4 py-3 outline-none text-black placeholder-black/40"
               />
               <button onClick={() => send(input)}

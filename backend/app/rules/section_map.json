@@ -1,0 +1,22 @@
+{
+  "_comment": "Maps Income-tax Act 1961 section numbers to Income-tax Act 2025 equivalents. Effective 1 April 2026. ALL entries verified=false until confirmed against published gazette of Income-tax Act 2025.",
+  "verified": false,
+  "source_url": "https://incometaxindia.gov.in/pages/draft-income-tax-bill-2025.aspx",
+  "mappings": {
+    "80C":    { "act_2025": "UNVERIFIED", "description": "Deductions – life insurance, ELSS, PPF etc." },
+    "80CCD":  { "act_2025": "UNVERIFIED", "description": "Deductions – NPS contributions" },
+    "80D":    { "act_2025": "UNVERIFIED", "description": "Health insurance premium deduction" },
+    "24b":    { "act_2025": "UNVERIFIED", "description": "Home loan interest deduction" },
+    "80E":    { "act_2025": "UNVERIFIED", "description": "Education loan interest deduction" },
+    "80EEB":  { "act_2025": "UNVERIFIED", "description": "EV loan interest deduction" },
+    "87A":    { "act_2025": "UNVERIFIED", "description": "Tax rebate for resident individuals" },
+    "111A":   { "act_2025": "UNVERIFIED", "description": "STCG on equity – flat rate" },
+    "112":    { "act_2025": "UNVERIFIED", "description": "LTCG on other assets" },
+    "112A":   { "act_2025": "UNVERIFIED", "description": "LTCG on equity/equity MF" },
+    "194A":   { "act_2025": "UNVERIFIED", "description": "TDS on interest income" },
+    "194":    { "act_2025": "UNVERIFIED", "description": "TDS on dividends" },
+    "234A":   { "act_2025": "UNVERIFIED", "description": "Interest for delay in filing" },
+    "234B":   { "act_2025": "UNVERIFIED", "description": "Interest for advance tax default" },
+    "234C":   { "act_2025": "UNVERIFIED", "description": "Interest for advance tax deferment" }
+  }
+}
