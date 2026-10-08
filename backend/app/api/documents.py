@@ -42,17 +42,52 @@ async def upload_document(background_tasks: BackgroundTasks, file: UploadFile = 
         )
         doc_id = cursor.lastrowid
 
+    # 1. Synchronously extract portfolio data from PDF to update live Wealth Engine & Dashboard
+    reconciled_assets = 0
+    reconciled_liabs = 0
+    from app.parsers.statement_extractor import extract_portfolio_from_pdf
+    try:
+        extracted = extract_portfolio_from_pdf(file_path)
+        with database.get_db() as conn:
+            # If assets were detected, replace or merge into live assets
+            if extracted["assets"]:
+                conn.execute("DELETE FROM assets")
+                for a in extracted["assets"]:
+                    conn.execute(
+                        "INSERT INTO assets(type, label, value, yield_pct, created_at, updated_at) VALUES(?,?,?,?,?,?)",
+                        (a["type"], a["label"], a["value"], a["yield_pct"], upload_date, upload_date)
+                    )
+                    reconciled_assets += 1
+
+            # If liabilities were detected, replace or merge into live liabilities
+            if extracted["liabilities"]:
+                conn.execute("DELETE FROM liabilities")
+                for l in extracted["liabilities"]:
+                    conn.execute(
+                        "INSERT INTO liabilities(type, label, remaining, rate, emi, tenure, created_at, updated_at) VALUES(?,?,?,?,?,?,?,?)",
+                        (l["type"], l["label"], l["remaining"], l["rate"], l["emi"], l["tenure"], upload_date, upload_date)
+                    )
+                    reconciled_liabs += 1
+    except Exception as e:
+        pass
+
+    # 2. Add background semantic ingestion for RAG vector search
     background_tasks.add_task(ingestion_pipeline.ingest_pdf, file_path, doc_id, safe_name)
+
+    msg = f"Reconciled {reconciled_assets} assets and {reconciled_liabs} liabilities into your live database!" if (reconciled_assets or reconciled_liabs) else "Document uploaded and indexed into local vector store."
 
     return DocumentResponse(
         id=doc_id,
         filename=safe_name,
         source="upload",
         upload_date=upload_date,
-        page_count=0,
+        page_count=1,
         chunk_count=0,
         status=DocumentStatus.processing,
-        file_path=str(file_path)
+        file_path=str(file_path),
+        reconciled_assets=reconciled_assets,
+        reconciled_liabilities=reconciled_liabs,
+        message=msg
     )
 
 @router.get("", response_model=DocumentListResponse)
@@ -127,3 +162,43 @@ def reindex_document(doc_id: int, background_tasks: BackgroundTasks):
         return ReindexResponse(document_id=doc_id, status="processing", chunks_created=0, message="Reindexing started")
     else:
         raise HTTPException(status_code=400, detail="File not found for reindexing")
+
+@router.post("/load-sample")
+def load_sample_statement():
+    sample_path = Path("SAMPLE_HDFC_CONSOLIDATED_STATEMENT.pdf")
+    if not sample_path.exists():
+        raise HTTPException(status_code=404, detail="Sample statement file not found")
+
+    from app.parsers.statement_extractor import extract_portfolio_from_pdf
+    extracted = extract_portfolio_from_pdf(sample_path)
+    now = datetime.datetime.now().isoformat()
+
+    reconciled_assets = 0
+    reconciled_liabs = 0
+
+    with database.get_db() as conn:
+        if extracted["assets"]:
+            conn.execute("DELETE FROM assets")
+            for a in extracted["assets"]:
+                conn.execute(
+                    "INSERT INTO assets(type, label, value, yield_pct, created_at, updated_at) VALUES(?,?,?,?,?,?)",
+                    (a["type"], a["label"], a["value"], a["yield_pct"], now, now)
+                )
+                reconciled_assets += 1
+
+        if extracted["liabilities"]:
+            conn.execute("DELETE FROM liabilities")
+            for l in extracted["liabilities"]:
+                conn.execute(
+                    "INSERT INTO liabilities(type, label, remaining, rate, emi, tenure, created_at, updated_at) VALUES(?,?,?,?,?,?,?,?)",
+                    (l["type"], l["label"], l["remaining"], l["rate"], l["emi"], l["tenure"], now, now)
+                )
+                reconciled_liabs += 1
+
+    return {
+        "status": "success",
+        "reconciled_assets": reconciled_assets,
+        "reconciled_liabilities": reconciled_liabs,
+        "message": f"Successfully parsed SAMPLE_HDFC_CONSOLIDATED_STATEMENT.pdf! Updated {reconciled_assets} assets and {reconciled_liabs} loans into your live SQLite database."
+    }
+

@@ -60,8 +60,11 @@ export default function DocumentScanModal({ isOpen, onClose, onSuccess }: Docume
         throw new Error(err.detail || 'Failed to upload document')
       }
 
-      setMessage(`Successfully uploaded "${file.name}". Document ingestion pipeline started!`)
+      const data = await res.json()
+      const successMsg = data.message || `Successfully processed "${file.name}". Portfolio updated!`
+      setMessage(successMsg)
       setFile(null)
+      window.dispatchEvent(new CustomEvent('halo:wealth_updated'))
       if (onSuccess) onSuccess()
     } catch (e: any) {
       setIsError(true)
@@ -87,31 +90,31 @@ export default function DocumentScanModal({ isOpen, onClose, onSuccess }: Docume
         </p>
 
         {/* Quick Debt Bureau Sync Action */}
-        <div className="mb-5 p-4 rounded-2xl bg-emerald-50 border border-emerald-200/80 flex items-center justify-between">
+        <div className="mb-5 p-3.5 rounded-2xl bg-indigo-50/70 border border-indigo-100 flex items-center justify-between">
           <div>
-            <p className="text-xs font-bold text-emerald-900">Have a CIBIL / Experian Credit Report?</p>
-            <p className="text-[11px] text-emerald-700">Auto-detect all home, car, and personal loans without manual typing.</p>
+            <p className="text-xs font-bold text-indigo-900">Sample HDFC Consolidated Statement Ready</p>
+            <p className="text-[11px] text-indigo-700">Test 1-click full portfolio mutation with sample generated PDF.</p>
           </div>
           <button
             type="button"
             onClick={async () => {
               setUploading(true)
               try {
-                const res = await fetch('http://localhost:8000/api/wealth/import-cibil', { method: 'POST' })
+                const res = await fetch('http://localhost:8000/api/documents/load-sample', { method: 'POST' })
                 const data = await res.json()
                 setMessage(data.message)
                 window.dispatchEvent(new CustomEvent('halo:wealth_updated'))
                 if (onSuccess) onSuccess()
               } catch (e: any) {
                 setIsError(true)
-                setMessage('Error importing credit report.')
+                setMessage('Error loading sample statement.')
               } finally {
                 setUploading(false)
               }
             }}
-            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shrink-0 shadow-xs transition-colors"
+            className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shrink-0 shadow-xs transition-colors"
           >
-            Auto-Sync Loans
+            Apply Sample PDF
           </button>
         </div>
 

@@ -18,6 +18,9 @@ class DocumentResponse(BaseModel):
     chunk_count: int
     status: DocumentStatus
     file_path: str | None = None
+    reconciled_assets: int = 0
+    reconciled_liabilities: int = 0
+    message: str | None = None
 
 class DocumentListResponse(BaseModel):
     documents: list[DocumentResponse]
