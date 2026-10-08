@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { ResponsiveContainer, XAxis, YAxis, Tooltip, AreaChart, Area } from 'recharts'
 import { useNavigate } from '../router'
 import VoiceMicButton from '../components/VoiceMicButton'
@@ -13,7 +13,10 @@ import {
   AlertTriangle,
   CreditCard,
   Sliders,
-  CheckCircle2
+  CheckCircle2,
+  Send,
+  X,
+  Trash2
 } from 'lucide-react'
 
 const MOCK_DATA = [
@@ -45,6 +48,30 @@ interface TaxComplianceStatus {
   active_exemptions: string[]
 }
 
+interface Msg {
+  role: 'user' | 'ai'
+  text: string
+  wealth_action?: boolean
+  suggestions?: string[]
+}
+
+const STORAGE_KEY_MSGS = 'halo_chat_msgs'
+const STORAGE_KEY_CONV = 'halo_chat_conv_id'
+
+const WELCOME: Msg = {
+  role: 'ai',
+  text: `Hi Advait! I'm Halo, your on-device AI wealth assistant 👋\n\nI have direct access to your live portfolio database. Ask me anything or command portfolio changes directly:\n\n• **"Change homeloan to 40 lakhs"**\n• **"Add 15L mutual funds"**\n• **"Prepay 5L from car loan"**\n• **"What is my tax liability under New Regime?"**`,
+  suggestions: ['Change homeloan to 40 lakhs', 'What is my current net worth?', 'Add 15L Mutual Funds', 'Optimize Section 80C'],
+}
+
+function loadMsgs(): Msg[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_MSGS)
+    if (raw) return JSON.parse(raw)
+  } catch {}
+  return [WELCOME]
+}
+
 export default function Today() {
   const [query, setQuery] = useState('')
   const [score, setScore] = useState(850)
@@ -58,7 +85,31 @@ export default function Today() {
   // Interactive Future-Self Time Machine Age State
   const [age, setAge] = useState<number>(30)
 
+  // Side Chat Copilot State
+  const [msgs, setMsgs] = useState<Msg[]>(loadMsgs)
+  const [convId, setConvId] = useState<string | undefined>(
+    () => localStorage.getItem(STORAGE_KEY_CONV) || undefined
+  )
+  const [thinking, setThinking] = useState(false)
+  const [isChatOpen, setIsChatOpen] = useState(false)
+  const [sideInput, setSideInput] = useState('')
+  const chatBottomRef = useRef<HTMLDivElement>(null)
+
   const navigate = useNavigate()
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY_MSGS, JSON.stringify(msgs))
+  }, [msgs])
+
+  useEffect(() => {
+    if (convId) localStorage.setItem(STORAGE_KEY_CONV, convId)
+  }, [convId])
+
+  useEffect(() => {
+    if (isChatOpen) {
+      chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [msgs, thinking, isChatOpen])
 
   const fetchSummary = () => {
     fetch('http://localhost:8000/api/wealth/summary')
@@ -90,9 +141,84 @@ export default function Today() {
     return () => window.removeEventListener('halo:wealth_updated', handleUpdate)
   }, [selectedFy])
 
+  const clearChat = () => {
+    localStorage.removeItem(STORAGE_KEY_MSGS)
+    localStorage.removeItem(STORAGE_KEY_CONV)
+    setMsgs([WELCOME])
+    setConvId(undefined)
+  }
+
+  const sendMsg = async (text: string) => {
+    if (!text.trim() || thinking) return
+    const cleaned = text.trim()
+    setIsChatOpen(true)
+    setMsgs(m => [...m, { role: 'user', text: cleaned }])
+    setThinking(true)
+
+    // Handle UI navigation commands directly
+    const lower = cleaned.toLowerCase()
+    if (lower.includes('open wealth engine') || lower.includes('go to wealth engine')) {
+      setTimeout(() => {
+        setThinking(false)
+        setMsgs(m => [...m, { role: 'ai', text: 'Opening your Wealth Engine dashboard now! 🚀' }])
+        navigate('/wealth-engine')
+      }, 300)
+      return
+    }
+    if (lower.includes('open what if') || lower.includes('what if') || lower.includes('open scenarios')) {
+      setTimeout(() => {
+        setThinking(false)
+        setMsgs(m => [...m, { role: 'ai', text: 'Opening What-If Life Decision Simulators! 🔀' }])
+        navigate('/what-if')
+      }, 300)
+      return
+    }
+
+    try {
+      const response = await fetch('http://localhost:8000/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: cleaned, conversation_id: convId }),
+      })
+
+      const data = await response.json()
+      if (data.conversation_id) setConvId(data.conversation_id)
+
+      const toolsExecuted: string[] = data.executed_tools || []
+      const isWealthAction = toolsExecuted.some((t: string) =>
+        ['add_asset', 'update_asset', 'delete_asset', 'add_liability', 'update_liability', 'delete_liability'].includes(t)
+      )
+
+      if (isWealthAction) {
+        // Automatically updates dashboard everywhere!
+        fetchSummary()
+        fetchTaxCompliance()
+        window.dispatchEvent(new CustomEvent('halo:wealth_updated'))
+      }
+
+      setMsgs(m => [...m, {
+        role: 'ai',
+        text: data.answer || "I have processed your request.",
+        wealth_action: isWealthAction,
+        suggestions: isWealthAction
+          ? ['What is my updated net worth?', 'Show real-time money flow', 'Audit my tax liability']
+          : undefined,
+      }])
+    } catch {
+      setMsgs(m => [...m, {
+        role: 'ai',
+        text: 'Error connecting to the AI backend. Please ensure the local backend server is running.',
+      }])
+    } finally {
+      setThinking(false)
+    }
+  }
+
   const handleAsk = () => {
     if (!query.trim()) return
-    navigate(`/tax-planning?q=${encodeURIComponent(query.trim())}`)
+    const textToSend = query.trim()
+    setQuery('')
+    sendMsg(textToSend)
   }
 
   const handleVoiceTranscript = (text: string) => {
@@ -132,9 +258,12 @@ export default function Today() {
   )
 
   return (
-    <div className="max-w-[88rem] mx-auto w-full px-6 py-8">
-      {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+    <div className="max-w-[96rem] mx-auto w-full px-4 sm:px-6 py-8">
+      <div className="flex gap-6 items-start relative w-full">
+        {/* Main Dashboard Column — smoothly shifts left when copilot is open */}
+        <div className={`transition-all duration-300 min-w-0 ${isChatOpen ? 'flex-1 max-w-full lg:max-w-[calc(100%-420px)] xl:max-w-[calc(100%-460px)]' : 'w-full'}`}>
+          {/* Top Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div>
           <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Good Morning, Advait 👋</h1>
           <p className="text-slate-500 mt-1">
@@ -496,32 +625,202 @@ export default function Today() {
         </button>
       </div>
 
-      {/* Sticky AI Chat with Voice Recognition */}
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-full max-w-2xl px-4 z-40">
-        <div className="bg-white/95 backdrop-blur-xl border border-slate-200 shadow-2xl rounded-2xl p-2 flex items-center gap-2">
-          <div className="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center shrink-0 font-bold">
-            ✨
-          </div>
-
-          <input 
-            type="text" 
-            placeholder="Ask or speak in Hinglish (e.g. 'Bhai 20L car loan add karo', 'Open what if')..." 
-            className="flex-1 bg-transparent text-slate-900 placeholder-slate-400 outline-none text-base py-3 px-1"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') handleAsk() }}
-          />
-
-          <VoiceMicButton onTranscript={handleVoiceTranscript} />
-
-          <button 
-            onClick={handleAsk}
-            className="bg-indigo-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium shadow-sm hover:bg-indigo-700 transition-colors shrink-0"
-          >
-            Ask Halo
-          </button>
-        </div>
       </div>
+
+        {/* Right Side Chat Panel on Today's Page */}
+        {isChatOpen && (
+          <div className="w-full lg:w-[420px] xl:w-[460px] shrink-0 sticky top-20 bg-white rounded-3xl border border-slate-200 shadow-2xl flex flex-col h-[calc(100vh-6rem)] overflow-hidden transition-all duration-300 z-30">
+            {/* Header */}
+            <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white text-sm font-bold shadow-sm">
+                  ✨
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 leading-tight">Halo AI Copilot</h3>
+                  <p className="text-[10px] text-emerald-600 font-medium flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    100% on-device • Live DB execution
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={clearChat}
+                  className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors"
+                  title="Clear conversation"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setIsChatOpen(false)}
+                  className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors"
+                  title="Close side chat"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Conversation Messages */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {msgs.map((m, idx) => (
+                m.role === 'user' ? (
+                  <div key={idx} className="flex justify-end">
+                    <div className="bg-indigo-600 text-white rounded-2xl rounded-tr-sm px-4 py-2.5 max-w-[85%] text-xs leading-relaxed shadow-sm whitespace-pre-wrap">
+                      {m.text}
+                    </div>
+                  </div>
+                ) : (
+                  <div key={idx} className="flex gap-2.5">
+                    <div className="w-6 h-6 rounded-full bg-slate-900 flex items-center justify-center text-[10px] text-white shrink-0 mt-0.5">
+                      ✨
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="bg-slate-50 border border-slate-100 rounded-2xl rounded-tl-sm px-3.5 py-3 text-xs text-slate-800 leading-relaxed shadow-2xs">
+                        <div className="space-y-1">
+                          {m.text.split('\n').map((line, li) => {
+                            if (line.startsWith('**') && line.endsWith('**'))
+                              return <p key={li} className="font-bold text-slate-900">{line.replace(/\*\*/g, '')}</p>
+                            if (line.startsWith('• ') || line.startsWith('- ') || line.startsWith('* '))
+                              return <p key={li} className="pl-2 text-slate-700">• {line.slice(2).replace(/\*\*/g, '')}</p>
+                            if (line.startsWith('|')) return null
+                            if (line.trim() === '') return <br key={li} />
+                            return <p key={li} className="text-slate-700">{line.replace(/\*\*/g, '')}</p>
+                          })}
+                        </div>
+
+                        {m.wealth_action && (
+                          <div className="mt-2.5 p-2.5 bg-emerald-50 border border-emerald-200/80 rounded-xl flex items-center justify-between">
+                            <span className="text-[11px] font-bold text-emerald-800 flex items-center gap-1.5">
+                              ⚡ Dashboard & Database Updated live!
+                            </span>
+                            <span className="text-[10px] font-semibold text-emerald-600">Saved to SQLite</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {m.suggestions && m.suggestions.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 mt-2">
+                          {m.suggestions.map((s, si) => (
+                            <button
+                              key={si}
+                              onClick={() => sendMsg(s)}
+                              className="text-[11px] bg-white border border-slate-200 hover:border-indigo-400 hover:text-indigo-600 text-slate-600 px-2.5 py-1 rounded-full transition-colors"
+                            >
+                              {s}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )
+              ))}
+
+              {thinking && (
+                <div className="flex gap-2.5 items-center text-xs text-slate-400">
+                  <div className="w-6 h-6 rounded-full bg-slate-900 flex items-center justify-center text-[10px] text-white shrink-0 animate-pulse">
+                    ✨
+                  </div>
+                  <div className="bg-slate-50 border border-slate-100 rounded-2xl px-3 py-2 flex items-center gap-1.5 text-[11px] text-slate-500">
+                    <span className="w-1.5 h-1.5 bg-indigo-600 rounded-full animate-bounce"></span>
+                    <span className="w-1.5 h-1.5 bg-indigo-600 rounded-full animate-bounce [animation-delay:0.2s]"></span>
+                    <span className="w-1.5 h-1.5 bg-indigo-600 rounded-full animate-bounce [animation-delay:0.4s]"></span>
+                    <span className="ml-1 font-medium">Computing on-device...</span>
+                  </div>
+                </div>
+              )}
+              <div ref={chatBottomRef} />
+            </div>
+
+            {/* Side Panel Input with full multiline textarea support */}
+            <div className="p-3 border-t border-slate-100 bg-white">
+              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-1.5 flex items-end gap-1.5 focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-100 transition-all">
+                <textarea
+                  rows={1}
+                  value={sideInput}
+                  onChange={e => setSideInput(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault()
+                      if (sideInput.trim()) {
+                        sendMsg(sideInput.trim())
+                        setSideInput('')
+                      }
+                    }
+                  }}
+                  placeholder="Ask or update (e.g. 'change homeloan to 40L', 'add 10L cash')..."
+                  className="flex-1 bg-transparent text-xs text-slate-900 placeholder-slate-400 outline-none p-2 resize-none max-h-32 min-h-[36px]"
+                />
+                <VoiceMicButton onTranscript={t => setSideInput(t)} />
+                <button
+                  onClick={() => {
+                    if (sideInput.trim()) {
+                      sendMsg(sideInput.trim())
+                      setSideInput('')
+                    }
+                  }}
+                  disabled={!sideInput.trim() || thinking}
+                  className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center hover:bg-indigo-700 transition-colors disabled:opacity-40 shrink-0 mb-0.5"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Floating Copilot Toggle Badge (when closed) */}
+      {!isChatOpen && (
+        <button
+          onClick={() => setIsChatOpen(true)}
+          className="fixed bottom-6 right-6 z-40 bg-indigo-600 text-white px-4 py-3 rounded-full shadow-2xl hover:bg-indigo-700 hover:scale-105 transition-all flex items-center gap-2 text-xs font-bold"
+          title="Open AI Copilot"
+        >
+          <Sparkles className="w-4 h-4" />
+          <span>Halo Copilot</span>
+        </button>
+      )}
+
+      {/* Sticky Bottom Bar on Dashboard for long queries (when side panel is closed) */}
+      {!isChatOpen && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-full max-w-2xl px-4 z-40">
+          <div className="bg-white/95 backdrop-blur-xl border border-slate-200 shadow-2xl rounded-2xl p-2 flex items-end gap-2 focus-within:border-indigo-500 focus-within:ring-4 focus-within:ring-indigo-100 transition-all">
+            <div className="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center shrink-0 font-bold mb-0.5">
+              ✨
+            </div>
+
+            <textarea
+              rows={1}
+              placeholder="Ask or speak in Hinglish (e.g. 'Change homeloan to 40 lakhs', 'Add 15L mutual funds')..."
+              className="flex-1 bg-transparent text-slate-900 placeholder-slate-400 outline-none text-sm py-2 px-1 resize-none max-h-32 min-h-[40px]"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault()
+                  handleAsk()
+                }
+              }}
+            />
+
+            <div className="flex items-center gap-1.5 shrink-0 mb-0.5">
+              <VoiceMicButton onTranscript={handleVoiceTranscript} />
+              <button
+                onClick={handleAsk}
+                disabled={!query.trim()}
+                className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-semibold shadow-sm hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center gap-1.5"
+              >
+                <span>Ask</span>
+                <Send className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <DocumentScanModal
         isOpen={isScanOpen}

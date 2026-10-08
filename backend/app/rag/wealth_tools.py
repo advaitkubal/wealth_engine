@@ -167,6 +167,49 @@ TOOLS = [
     {
         "type": "function",
         "function": {
+            "name": "update_liability",
+            "description": (
+                "Update an existing liability (e.g. modify remaining balance, interest rate, or monthly EMI of Home Loan, Car Loan, etc.). "
+                "Use this whenever the user says 'change homeloan to 40 lakhs', 'update loan', 'modify home loan', "
+                "'prepay 5 lakhs from loan', or similar. Can identify loan by liab_id OR by loan_name/loan_type."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "liab_id":   {"type": "integer", "description": "Optional numeric ID of the liability to update."},
+                    "loan_name": {"type": "string", "description": "Name or category of loan to update, e.g. 'Home Loan', 'Car Loan', 'SBI Home Loan'."},
+                    "remaining": {"type": "string", "description": "New remaining balance/principal, e.g. '40 lakhs', '25L', '1800000'."},
+                    "rate":      {"type": "number", "description": "New annual interest rate percentage (e.g. 8.25, 9.5)."},
+                    "emi":       {"type": "string", "description": "New monthly EMI amount, e.g. '32k' or '32000'."},
+                    "tenure":    {"type": "integer", "description": "New remaining tenure in months."},
+                },
+                "required": [],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "update_asset",
+            "description": (
+                "Update an existing asset (e.g. modify valuation or yield of Mutual Funds, Cash balance, Real Estate, etc.). "
+                "Can identify asset by asset_id OR by asset_name/asset_type."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "asset_id":   {"type": "integer", "description": "Optional numeric ID of the asset to update."},
+                    "asset_name": {"type": "string", "description": "Name or category of asset to update, e.g. 'Mutual Funds', 'Cash', 'Gold'."},
+                    "value":      {"type": "string", "description": "New monetary value, e.g. '50 lakhs', '1.2 cr', '250000'."},
+                    "yield_pct":  {"type": "number", "description": "New expected annual yield percentage."},
+                },
+                "required": [],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "compute_indian_tax",
             "description": (
                 "Accurately compute Indian personal income tax liability under the New Tax Regime "
@@ -401,6 +444,97 @@ def execute_tool(name: str, args: dict) -> str:
                 label = row["label"]
                 conn.execute("DELETE FROM liabilities WHERE id=?", (liab_id,))
             return f"SUCCESS: Deleted liability '{label}' (ID {liab_id}) from the Wealth Engine."
+
+        elif name == "update_liability":
+            now = datetime.datetime.now().isoformat()
+            liab_id = args.get("liab_id")
+            loan_name = str(args.get("loan_name") or args.get("label") or args.get("type") or "").strip()
+            raw_rem = args.get("remaining") or args.get("value") or args.get("amount") or args.get("principal")
+            raw_rate = args.get("rate") or args.get("interest_rate")
+            raw_emi = args.get("emi")
+            raw_tenure = args.get("tenure")
+
+            with database.get_db() as conn:
+                target_row = None
+                if liab_id is not None:
+                    target_row = conn.execute("SELECT * FROM liabilities WHERE id=?", (int(liab_id),)).fetchone()
+                if not target_row and loan_name:
+                    target_row = conn.execute(
+                        "SELECT * FROM liabilities WHERE label LIKE ? OR type LIKE ? ORDER BY id LIMIT 1",
+                        (f"%{loan_name}%", f"%{loan_name}%")
+                    ).fetchone()
+                if not target_row:
+                    target_row = conn.execute("SELECT * FROM liabilities ORDER BY remaining DESC LIMIT 1").fetchone()
+
+                if not target_row:
+                    return "ERROR: No matching liability found to update."
+
+                target_id = target_row["id"]
+                current_rem = target_row["remaining"]
+                current_rate = target_row["rate"]
+                current_emi = target_row["emi"]
+                current_tenure = target_row["tenure"]
+
+                new_rem = parse_indian_currency(raw_rem) if raw_rem is not None else current_rem
+                new_rate = float(raw_rate) if raw_rate is not None else current_rate
+                new_emi = parse_indian_currency(raw_emi) if raw_emi is not None else current_emi
+                new_tenure = int(raw_tenure) if raw_tenure is not None else current_tenure
+
+                conn.execute(
+                    "UPDATE liabilities SET remaining=?, rate=?, emi=?, tenure=?, updated_at=? WHERE id=?",
+                    (new_rem, new_rate, new_emi, new_tenure, now, target_id)
+                )
+                updated_row = dict(conn.execute("SELECT * FROM liabilities WHERE id=?", (target_id,)).fetchone())
+                total_a = conn.execute("SELECT SUM(value) FROM assets").fetchone()[0] or 0
+                total_l = conn.execute("SELECT SUM(remaining) FROM liabilities").fetchone()[0] or 0
+                net = total_a - total_l
+
+            return (
+                f"SUCCESS: Updated liability '{updated_row['label']}' (ID: {updated_row['id']}). "
+                f"Outstanding principal is now ₹{updated_row['remaining']:,.0f} (Rate: {updated_row['rate']}%, EMI: ₹{updated_row['emi']:,.0f}/mo). "
+                f"Your Wealth Engine dashboard now reflects Total Liabilities: ₹{total_l:,.0f} and Net Worth: ₹{net:,.0f}."
+            )
+
+        elif name == "update_asset":
+            now = datetime.datetime.now().isoformat()
+            asset_id = args.get("asset_id")
+            asset_name = str(args.get("asset_name") or args.get("label") or args.get("type") or "").strip()
+            raw_val = args.get("value") or args.get("amount") or args.get("val")
+            raw_yield = args.get("yield_pct") or args.get("yield")
+
+            with database.get_db() as conn:
+                target_row = None
+                if asset_id is not None:
+                    target_row = conn.execute("SELECT * FROM assets WHERE id=?", (int(asset_id),)).fetchone()
+                if not target_row and asset_name:
+                    target_row = conn.execute(
+                        "SELECT * FROM assets WHERE label LIKE ? OR type LIKE ? ORDER BY id LIMIT 1",
+                        (f"%{asset_name}%", f"%{asset_name}%")
+                    ).fetchone()
+                if not target_row:
+                    return "ERROR: No matching asset found to update."
+
+                target_id = target_row["id"]
+                current_val = target_row["value"]
+                current_yield = target_row["yield_pct"]
+
+                new_val = parse_indian_currency(raw_val) if raw_val is not None else current_val
+                new_yield = float(raw_yield) if raw_yield is not None else current_yield
+
+                conn.execute(
+                    "UPDATE assets SET value=?, yield_pct=?, updated_at=? WHERE id=?",
+                    (new_val, new_yield, now, target_id)
+                )
+                updated_row = dict(conn.execute("SELECT * FROM assets WHERE id=?", (target_id,)).fetchone())
+                total_a = conn.execute("SELECT SUM(value) FROM assets").fetchone()[0] or 0
+                total_l = conn.execute("SELECT SUM(remaining) FROM liabilities").fetchone()[0] or 0
+                net = total_a - total_l
+
+            return (
+                f"SUCCESS: Updated asset '{updated_row['label']}' (ID: {updated_row['id']}). "
+                f"New valuation is ₹{updated_row['value']:,.0f} (Yield: {updated_row['yield_pct']}% p.a.). "
+                f"Your Wealth Engine dashboard now reflects Total Assets: ₹{total_a:,.0f} and Net Worth: ₹{net:,.0f}."
+            )
 
         elif name == "compute_indian_tax":
             regime_str = str(args.get("regime", "new")).lower()

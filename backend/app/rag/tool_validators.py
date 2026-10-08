@@ -101,12 +101,28 @@ class CalculateLoanAndEmiParams(BaseModel):
             raise ValueError("Tenure cannot exceed 40 years.")
         return str(v)
 
+class UpdateLiabilityParams(BaseModel):
+    liab_id: Optional[int] = None
+    loan_name: Optional[str] = None
+    remaining: Optional[Any] = None
+    rate: Optional[Any] = None
+    emi: Optional[Any] = None
+    tenure: Optional[Any] = None
+
+class UpdateAssetParams(BaseModel):
+    asset_id: Optional[int] = None
+    asset_name: Optional[str] = None
+    value: Optional[Any] = None
+    yield_pct: Optional[Any] = None
+
 TOOL_MODELS = {
     "get_portfolio_summary": GetPortfolioSummaryParams,
     "add_asset": AddAssetParams,
     "add_liability": AddLiabilityParams,
     "delete_asset": DeleteAssetParams,
     "delete_liability": DeleteLiabilityParams,
+    "update_liability": UpdateLiabilityParams,
+    "update_asset": UpdateAssetParams,
     "compute_indian_tax": ComputeIndianTaxParams,
     "calculate_loan_and_emi": CalculateLoanAndEmiParams,
 }
