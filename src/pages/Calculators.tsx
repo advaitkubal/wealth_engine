@@ -1,35 +1,23 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Navbar from '../components/Navbar'
 
 /* ── Helpers ── */
 function fmt(n: number) { return `₹${Math.round(n).toLocaleString('en-IN')}` }
 
 function taxSlab(income: number, slabs: { upto: number; rate: number }[]) {
+  if (!slabs || slabs.length === 0) return 0;
   let tax = 0, prev = 0
   for (const s of slabs) {
     if (income <= prev) break
-    tax += (Math.min(income, s.upto) - prev) * s.rate
-    prev = s.upto
+    const upper = s.upto === null ? Infinity : s.upto
+    tax += (Math.min(income, upper) - prev) * s.rate
+    prev = upper
   }
   return tax * 1.04 // 4% cess
 }
 
-const OLD_SLABS = [
-  { upto:250000,  rate:0    },
-  { upto:500000,  rate:0.05 },
-  { upto:1000000, rate:0.20 },
-  { upto:Infinity,rate:0.30 },
-]
-const NEW_SLABS = [
-  { upto:300000,  rate:0    },
-  { upto:700000,  rate:0.05 },
-  { upto:1000000, rate:0.10 },
-  { upto:1200000, rate:0.15 },
-  { upto:1500000, rate:0.20 },
-  { upto:Infinity,rate:0.30 },
-]
-
 function Slider({ label, min, max, step=1, value, onChange, display }:
+
   { label:string; min:number; max:number; step?:number; value:number; onChange:(v:number)=>void; display:string }) {
   return (
     <div className="flex flex-col gap-1.5">
@@ -50,11 +38,26 @@ function TaxRegimeCalc() {
   const [c80,  setC80]  = useState(150000)
   const [c80d, setC80d] = useState(25000)
   const [hra,  setHra]  = useState(120000)
+  const [oldSlabs, setOldSlabs] = useState<{upto:number|null, rate:number}[]>([])
+  const [newSlabs, setNewSlabs] = useState<{upto:number|null, rate:number}[]>([])
+  
+  useEffect(() => {
+    fetch('http://localhost:8000/api/tax/rules-status')
+      .then(r => r.json())
+      .then(data => {
+        const fy24 = data.find((d: any) => d.fy === '2024-25')
+        if (fy24) {
+          const rules = fy24.raw_rules
+          setOldSlabs(rules.old_regime.slabs_individual_below_60.map((s:any) => ({ upto: s.to, rate: s.rate })))
+          setNewSlabs(rules.new_regime.slabs.map((s:any) => ({ upto: s.to, rate: s.rate })))
+        }
+      }).catch(console.error)
+  }, [])
 
   const oldTaxable = Math.max(0, income - 50000 - c80 - c80d - hra)
-  const oldTax  = taxSlab(oldTaxable, OLD_SLABS)
+  const oldTax  = taxSlab(oldTaxable, oldSlabs)
   const newTaxable = Math.max(0, income - 75000)
-  const newTax  = taxSlab(newTaxable, NEW_SLABS)
+  const newTax  = taxSlab(newTaxable, newSlabs)
   const better  = oldTax <= newTax ? 'Old Regime' : 'New Regime'
   const saving  = Math.abs(oldTax - newTax)
 

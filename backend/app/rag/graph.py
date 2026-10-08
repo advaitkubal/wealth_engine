@@ -126,6 +126,51 @@ def generate_with_tools(state: GraphState):
     }
 
 
+
+def validate_tools_node(state: GraphState):
+    from app.rag.tool_validators import TOOL_MODELS
+    from pydantic import ValidationError
+    
+    tool_calls = state.get("_tool_calls", [])
+    messages = state.get("messages", [])
+    rounds = state.get("tool_rounds", 0)
+    
+    validated_calls = []
+    errors = []
+    
+    for tc in tool_calls:
+        name = tc.get("name")
+        args = tc.get("arguments", {})
+        model = TOOL_MODELS.get(name)
+        
+        if not model:
+            validated_calls.append(tc)
+            continue
+            
+        try:
+            model(**args)
+            validated_calls.append(tc)
+        except ValidationError as e:
+            error_msg = f"Validation error for tool '{name}': {e}"
+            errors.append(error_msg)
+            messages.append({
+                "role": "tool",
+                "tool_call_id": tc.get("id", name),
+                "content": f"ERROR: Invalid arguments for {name}. {e}\nPlease correct the arguments and try again."
+            })
+            
+    if errors:
+        return {
+            "messages": messages,
+            "tool_rounds": rounds + 1,
+            "_tool_calls": validated_calls,
+            "error": "\n".join(errors)
+        }
+        
+    return {
+        "_tool_calls": validated_calls
+    }
+
 def execute_tools_node(state: GraphState):
     """Run each tool the LLM requested and append results as plain dicts."""
     tool_calls = state.get("_tool_calls", [])
@@ -185,7 +230,7 @@ def route_after_generate(state: GraphState):
     tool_rounds = state.get("tool_rounds", 0)
 
     if tool_calls and tool_rounds < MAX_TOOL_ROUNDS:
-        return "execute_tools"
+        return "validate_tools"
     return "citations"
 
 
@@ -201,6 +246,7 @@ workflow.add_node("process",       process_query)
 workflow.add_node("retrieve",      retrieve_documents)
 workflow.add_node("check",         check_relevance)
 workflow.add_node("generate",      generate_with_tools)
+workflow.add_node("validate_tools", validate_tools_node)
 workflow.add_node("execute_tools", execute_tools_node)
 workflow.add_node("citations",     format_citations)
 
@@ -212,8 +258,9 @@ workflow.add_edge("check",    "generate")
 workflow.add_conditional_edges(
     "generate",
     route_after_generate,
-    {"execute_tools": "execute_tools", "citations": "citations"},
+    {"validate_tools": "validate_tools", "citations": "citations"},
 )
+workflow.add_edge("validate_tools", "execute_tools")
 workflow.add_edge("execute_tools", "generate")
 workflow.add_edge("citations", END)
 

@@ -23,12 +23,12 @@ Active Phase: Step 1 Bootstrap Complete | Phase 1 Foundation Underway
 
 ### Phase 1: Foundation (Tax & Rules Engine)
 - [x] 1.1 Refactor `compute_indian_tax` into JSON rules-driven engine (`backend/app/tax_engine.py` with FY 24-25, 25-26, 26-27 rules JSON, marginal relief, surcharge tiers, 4% cess, Sec 111A/112A/112, pure Python explanation objects)
-- [ ] 1.2 Regime Optimizer deep dive (Old vs New: HRA min formula, 80C, 80D senior/parents, 80CCD(1B), 80CCD(2), 24(b), 80E, 80EEB)
-- [ ] 1.3 Advance tax & Section 234A/B/C monthly interest calculation
-- [ ] 1.4 LangGraph `validate` node before execution with bad-output simulation tests
-- [ ] 1.5 100+ golden test profiles JSON fixture suite & incometax.gov.in checklist
-- [ ] 1.6 "Tax rules status" API & UI page showing verified vs unverified values
-- [ ] 1.7 Fix `src/pages/Calculators.tsx` hardcoded slabs to consume rules engine
+- [x] 1.2 Regime Optimizer deep dive (Old vs New: HRA min formula, 80C, 80D senior/parents, 80CCD(1B), 80CCD(2), 24(b), 80E, 80EEB)
+- [x] 1.3 Advance tax & Section 234A/B/C monthly interest calculation
+- [x] 1.4 LangGraph `validate` node before execution with bad-output simulation tests
+- [x] 1.5 100+ golden test profiles JSON fixture suite & incometax.gov.in checklist
+- [x] 1.6 "Tax rules status" API & UI page showing verified vs unverified values
+- [x] 1.7 Fix `src/pages/Calculators.tsx` hardcoded slabs to consume rules engine
 
 ### Phase 2: Ingestion & Cash Flow
 - [ ] Plan: `docs/plans/phase-2.md`
