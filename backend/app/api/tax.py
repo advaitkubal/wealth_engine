@@ -1,6 +1,7 @@
-from fastapi import APIRouter
-from pathlib import Path
 import json
+from pathlib import Path
+
+from fastapi import APIRouter
 
 router = APIRouter(prefix="/tax", tags=["Tax"])
 RULES_DIR = Path("backend/app/rules")
@@ -31,7 +32,7 @@ def get_rules_status():
         fy = p.stem.replace("fy_", "").replace("_", "-")
         with p.open() as f:
             data = json.load(f)
-            
+
         items = find_unverified(data)
         status_list.append({
             "fy": fy,

@@ -1,6 +1,9 @@
-from pydantic import BaseModel, Field, field_validator
-from typing import Optional, Any
+from typing import Any, Optional
+
+from pydantic import BaseModel, field_validator
+
 from app.rag.wealth_tools import parse_indian_currency
+
 
 class GetPortfolioSummaryParams(BaseModel):
     pass
@@ -83,14 +86,14 @@ class CalculateLoanAndEmiParams(BaseModel):
         if parsed < 0:
             raise ValueError("Value cannot be negative.")
         return str(v)
-    
+
     @field_validator('rate')
     def validate_rate(cls, v):
         parsed = parse_indian_currency(str(v))
         if parsed > 50:
             raise ValueError("Interest rate cannot exceed 50%.")
         return str(v)
-    
+
     @field_validator('tenure_years')
     def validate_tenure(cls, v):
         parsed = parse_indian_currency(str(v))

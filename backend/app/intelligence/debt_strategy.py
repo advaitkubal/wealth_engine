@@ -1,5 +1,7 @@
+from typing import Dict, List
+
 from pydantic import BaseModel
-from typing import List, Dict
+
 
 class PayoffPlan(BaseModel):
     strategy_name: str
@@ -11,7 +13,7 @@ def debt_avalanche(loans: List[Dict]) -> PayoffPlan:
     sorted_loans = sorted(loans, key=lambda x: x["rate"], reverse=True)
     return PayoffPlan(
         strategy_name="Avalanche",
-        order_of_payoff=[l["name"] for l in sorted_loans],
+        order_of_payoff=[loan["name"] for loan in sorted_loans],
         total_interest_saved=50000.0
     )
 
@@ -20,7 +22,7 @@ def debt_snowball(loans: List[Dict]) -> PayoffPlan:
     sorted_loans = sorted(loans, key=lambda x: x["balance"])
     return PayoffPlan(
         strategy_name="Snowball",
-        order_of_payoff=[l["name"] for l in sorted_loans],
+        order_of_payoff=[loan["name"] for loan in sorted_loans],
         total_interest_saved=20000.0
     )
 

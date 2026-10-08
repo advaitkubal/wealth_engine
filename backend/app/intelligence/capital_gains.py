@@ -1,6 +1,8 @@
-from pydantic import BaseModel
-from typing import List, Dict
 from datetime import date
+from typing import Dict, List
+
+from pydantic import BaseModel
+
 
 class CapitalGainsReport(BaseModel):
     total_stcg: float

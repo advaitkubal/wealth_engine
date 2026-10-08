@@ -1,17 +1,25 @@
+from app.tax_engine import (  # noqa: E402
+    OldRegimeInputs,
+    compare_regimes_detailed,
+    compute_hra_exemption,
+    compute_old_regime_deductions,
+    compute_section_234_interest,
+)
+
 """
 Tests: tax_engine.py — rules-driven Indian income tax calculations.
 All values tested against incometax.gov.in utility and Finance Act 2024.
 """
-import json
-import sys
-from pathlib import Path
+import json  # noqa: E402
+import sys  # noqa: E402
+from pathlib import Path  # noqa: E402
 
-import pytest
+import pytest  # noqa: E402
 
 # Ensure backend/app is importable
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from app.tax_engine import (
+from app.tax_engine import (  # noqa: E402
     Regime,
     RegimeComparison,
     compare_regimes,
@@ -351,14 +359,7 @@ class TestNetworkBlocked:
             sock.connect(("8.8.8.8", 80))
 
 
-from app.tax_engine import (
-    OldRegimeInputs,
-    compute_hra_exemption,
-    compute_old_regime_deductions,
-    compute_section_234_interest,
-    compare_regimes_detailed,
-    Regime
-)
+
 
 class TestOldRegimeDeductions:
     def test_hra_exemption_metro(self):
@@ -410,7 +411,7 @@ class TestOldRegimeDeductions:
         assert res.breakdown["24(b)"] == 200000
         assert res.breakdown["80E"] == 50000
         assert res.breakdown["80EEB"] == 150000
-        
+
         expected_total = 75000 + 200000 + 150000 + 50000 + 140000 + 50000 + 200000 + 50000 + 150000
         assert res.total_deduction == expected_total
 

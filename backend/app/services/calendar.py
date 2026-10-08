@@ -1,6 +1,8 @@
-from pydantic import BaseModel
 from datetime import date
 from typing import List
+
+from pydantic import BaseModel
+
 
 class FinancialEvent(BaseModel):
     date: date

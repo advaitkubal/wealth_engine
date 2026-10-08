@@ -128,25 +128,26 @@ def generate_with_tools(state: GraphState):
 
 
 def validate_tools_node(state: GraphState):
-    from app.rag.tool_validators import TOOL_MODELS
     from pydantic import ValidationError
-    
+
+    from app.rag.tool_validators import TOOL_MODELS
+
     tool_calls = state.get("_tool_calls", [])
     messages = state.get("messages", [])
     rounds = state.get("tool_rounds", 0)
-    
+
     validated_calls = []
     errors = []
-    
+
     for tc in tool_calls:
         name = tc.get("name")
         args = tc.get("arguments", {})
         model = TOOL_MODELS.get(name)
-        
+
         if not model:
             validated_calls.append(tc)
             continue
-            
+
         try:
             model(**args)
             validated_calls.append(tc)
@@ -158,7 +159,7 @@ def validate_tools_node(state: GraphState):
                 "tool_call_id": tc.get("id", name),
                 "content": f"ERROR: Invalid arguments for {name}. {e}\nPlease correct the arguments and try again."
             })
-            
+
     if errors:
         return {
             "messages": messages,
@@ -166,7 +167,7 @@ def validate_tools_node(state: GraphState):
             "_tool_calls": validated_calls,
             "error": "\n".join(errors)
         }
-        
+
     return {
         "_tool_calls": validated_calls
     }

@@ -1,6 +1,8 @@
-from pydantic import BaseModel
-from typing import List
 from datetime import date
+from typing import List
+
+from pydantic import BaseModel
+
 
 class BankTransaction(BaseModel):
     date: date
@@ -12,11 +14,16 @@ class BankTransaction(BaseModel):
 
 def _categorize(desc: str) -> str:
     desc = desc.lower()
-    if "salary" in desc: return "salary"
-    if "rent" in desc: return "rent"
-    if "emi" in desc: return "EMI"
-    if "grocery" in desc: return "grocery"
-    if "hospital" in desc or "medical" in desc: return "medical"
+    if "salary" in desc:
+        return "salary"
+    if "rent" in desc:
+        return "rent"
+    if "emi" in desc:
+        return "EMI"
+    if "grocery" in desc:
+        return "grocery"
+    if "hospital" in desc or "medical" in desc:
+        return "medical"
     return "other"
 
 def parse_bank_csv(file_path: str) -> List[BankTransaction]:

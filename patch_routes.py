@@ -1,4 +1,7 @@
+with open("src/App.tsx", "r") as f:
+    content = f.read()
 
+new_imports = """
 import { Router, Routes, Route } from './router'
 import { AnimatePresence, motion } from 'framer-motion'
 import AppShell from './AppShell'
@@ -21,13 +24,23 @@ const PageWrapper = ({ children }: { children: React.ReactNode }) => (
     {children}
   </motion.div>
 )
+"""
 
-import HomePage    from './pages/HomePage'
-import Calculators  from './pages/Calculators'
-import Security     from './pages/Security'
-import Insights     from './pages/Insights'
+content = content.replace("import { Router, Routes, Route } from './router'", new_imports)
+# Remove duplicate imports
+lines = content.split('\n')
+seen = set()
+clean_lines = []
+for line in lines:
+    if line.startswith("import "):
+        if line in seen:
+            continue
+        seen.add(line)
+    clean_lines.append(line)
+content = '\n'.join(clean_lines)
 
-
+# Now wrap Routes in AppShell
+app_comp = """
 export default function App() {
   return (
     <Router>
@@ -47,3 +60,10 @@ export default function App() {
     </Router>
   )
 }
+"""
+
+import re
+content = re.sub(r"export default function App\(\) \{.*", app_comp, content, flags=re.DOTALL)
+
+with open("src/App.tsx", "w") as f:
+    f.write(content)

@@ -1,5 +1,6 @@
 import { Link, NavLink } from '../router'
 import LogoIcon from './LogoIcon'
+import AirGapIndicator from './AirGapIndicator'
 
 const navLinks = [
   { label: 'Tax Planning',  to: '/tax-planning'  },
@@ -44,13 +45,15 @@ export default function Navbar({ absolute = false }: NavbarProps) {
           ))}
         </div>
 
-        {/* CTA */}
+        <div className="flex items-center gap-4">
+          <AirGapIndicator />
         <Link
           to="/wealth-engine"
           className="bg-black text-white text-base font-medium px-7 py-2.5 rounded-full hover:bg-gray-800 transition-colors duration-200"
         >
           Launch App
         </Link>
+        </div>
       </div>
     </nav>
   )

@@ -1,6 +1,7 @@
-import scipy.optimize
+import typing
 
-def compute_xirr(cashflows: list[tuple[any, float]]) -> float:
+
+def compute_xirr(cashflows: list[tuple[typing.Any, float]]) -> float:
     # cashflows is a list of (date, amount)
     # This is a stub, scipy.optimize would be used
     return 0.12

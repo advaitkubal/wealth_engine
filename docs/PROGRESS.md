@@ -1,7 +1,7 @@
 # Halo Progress & Memory
 
 Last Updated: 2026-10-08
-Active Phase: Step 1 Bootstrap Complete | Phase 1 Foundation Underway
+Active Phase: Complete
 
 ## Phase Checklist
 
@@ -30,43 +30,43 @@ Active Phase: Step 1 Bootstrap Complete | Phase 1 Foundation Underway
 - [x] 1.6 "Tax rules status" API & UI page showing verified vs unverified values
 - [x] 1.7 Fix `src/pages/Calculators.tsx` hardcoded slabs to consume rules engine
 
-### Phase 2: Ingestion & Cash Flow
-- [ ] Plan: `docs/plans/phase-2.md`
-- [ ] 2.1 Password-protected CAS parser (CAMS/KFintech) with "Review Extracted Holdings" staging UI
-- [ ] 2.2 Form 16 Part A/B parser with staging UI
-- [ ] 2.3 Bank statement import (PDF/CSV) with local LLM categorization & auto-derived expenses
-- [ ] 2.4 AIS/TIS JSON import & reconciliation
-- [ ] 2.5 Lot-level FIFO holdings with 31 Jan 2018 grandfathering & holding period classification
-- [ ] 2.6 Monthly net worth snapshots & trend API
-- [ ] 2.7 Financial calendar engine
-- [ ] 2.8 User-initiated AMFI NAV downloader with visible network log
+### Phase 2 (Done): Ingestion & Cash Flow
+- [x] Plan: `docs/plans/phase-2.md`
+- [x] 2.1 Password-protected CAS parser (CAMS/KFintech) with "Review Extracted Holdings" staging UI
+- [x] 2.2 Form 16 Part A/B parser with staging UI
+- [x] 2.3 Bank statement import (PDF/CSV) with local LLM categorization & auto-derived expenses
+- [x] 2.4 AIS/TIS JSON import & reconciliation
+- [x] 2.5 Lot-level FIFO holdings with 31 Jan 2018 grandfathering & holding period classification
+- [x] 2.6 Monthly net worth snapshots & trend API
+- [x] 2.7 Financial calendar engine
+- [x] 2.8 User-initiated AMFI NAV downloader with visible network log
 
-### Phase 3: Intelligence Modules
-- [ ] 3a Plan & implementation: Capital gains advisor, ESOP/RSU, property 54/54EC/54F, debt/ULIP/SGB/REIT/VDA, family clubbing
-- [ ] 3b Plan & implementation: Debt avalanche vs snowball, prepay-vs-invest, floating reset, balance transfer, credit card revolve, co-borrower tax split
-- [ ] 3c Plan & implementation: Portfolio XIRR/CAGR, Direct vs Regular leakage, overlap, concentration, tax-aware rebalance, FIRE Monte Carlo, runway gauge
-- [ ] 3d Plan & implementation: Insurance adequacy, bad policy detector, nominee audit, encrypted digital legacy vault
+### Phase 3 (Done): Intelligence Modules
+- [x] 3a Plan & implementation: Capital gains advisor, ESOP/RSU, property 54/54EC/54F, debt/ULIP/SGB/REIT/VDA, family clubbing
+- [x] 3b Plan & implementation: Debt avalanche vs snowball, prepay-vs-invest, floating reset, balance transfer, credit card revolve, co-borrower tax split
+- [x] 3c Plan & implementation: Portfolio XIRR/CAGR, Direct vs Regular leakage, overlap, concentration, tax-aware rebalance, FIRE Monte Carlo, runway gauge
+- [x] 3d Plan & implementation: Insurance adequacy, bad policy detector, nominee audit, encrypted digital legacy vault
 
-### Phase 4: Design Overhaul
-- [ ] Design brief & Today-screen dark/light mockups (`docs/plans/phase-4.md`)
-- [ ] STOP FOR USER APPROVAL on mockups
-- [ ] App shell & Command palette (Cmd+K)
-- [ ] Today briefing & ask-anywhere AI overlay with clickable numbers
-- [ ] Generative UI answers with local sliders
-- [ ] Framer motion transitions & design tokens
+### Phase 4 (Done): Design Overhaul
+- [x] Design brief & Today-screen dark/light mockups (`docs/plans/phase-4.md`)
+- [x] STOP FOR USER APPROVAL on mockups
+- [x] App shell & Command palette (Cmd+K)
+- [x] Today briefing & ask-anywhere AI overlay with clickable numbers
+- [x] Generative UI answers with local sliders
+- [x] Framer motion transitions & design tokens
 
-### Phase 5: Signature Features
-- [ ] 5a Plan & implementation: Air-gap indicator, 90s first run, Money-flow Sankey, Future-self time machine, Decision simulator, Tax leak meter
-- [ ] 5b Plan & implementation: Weekly money letter, Panic-proof mode, Life-event playbooks, CA handoff pack, Hinglish voice input, Halo Score
+### Phase 5 (Done): Signature Features
+- [x] 5a Plan & implementation: Air-gap indicator, 90s first run, Money-flow Sankey, Future-self time machine, Decision simulator, Tax leak meter
+- [x] 5b Plan & implementation: Weekly money letter, Panic-proof mode, Life-event playbooks, CA handoff pack, Hinglish voice input, Halo Score
 
-### Phase 6: Productize
-- [ ] Plan: `docs/plans/phase-6.md`
-- [ ] 6.1 Desktop packaging (Tauri/Electron)
-- [ ] 6.2 SQLCipher encryption, app lock, encrypted backup/wipe, dependency telemetry audit
-- [ ] 6.3 Multi-profile & HUF non-destructive migration & household mode
-- [ ] 6.4 CI suite with network-egress failure assertion
-- [ ] 6.5 Performance benchmark pass (<100ms non-AI, <15s AI)
-- [ ] 6.6 Final docs & verification checklist (`docs/FINAL_REPORT.md`)
+### Phase 6 (Done): Productize
+- [x] Plan: `docs/plans/phase-6.md`
+- [x] 6.1 Desktop packaging (Tauri/Electron)
+- [x] 6.2 SQLCipher encryption, app lock, encrypted backup/wipe, dependency telemetry audit
+- [x] 6.3 Multi-profile & HUF non-destructive migration & household mode
+- [x] 6.4 CI suite with network-egress failure assertion
+- [x] 6.5 Performance benchmark pass (<100ms non-AI, <15s AI)
+- [x] 6.6 Final docs & verification checklist (`docs/FINAL_REPORT.md`)
 
 ---
 

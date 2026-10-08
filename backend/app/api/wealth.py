@@ -4,6 +4,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from app.database import database
+from app.intelligence.halo_score import compute_halo_score
 
 router = APIRouter(prefix="/wealth", tags=["wealth"])
 
@@ -158,3 +159,11 @@ def portfolio_summary():
         "assets": assets,
         "liabilities": liabs,
     }
+
+
+
+
+@router.get("/intelligence/halo-score")
+def get_halo_score():
+    score = compute_halo_score({}, {}, {}, {})
+    return {"score": score.total_score, "breakdown": score.model_dump()}

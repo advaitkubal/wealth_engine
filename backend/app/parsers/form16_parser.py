@@ -1,5 +1,7 @@
+from typing import Dict
+
 from pydantic import BaseModel
-from typing import Dict, Optional
+
 
 class Form16Data(BaseModel):
     employer_name: str
