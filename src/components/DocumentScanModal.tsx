@@ -26,28 +26,13 @@ export default function DocumentScanModal({ isOpen, onClose, onSuccess }: Docume
     setIsDragging(false)
   }
 
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(false)
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      setFile(e.dataTransfer.files[0])
-    }
-  }
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0])
-    }
-  }
-
-  const handleUpload = async () => {
-    if (!file) return
+  const uploadSelectedFile = async (selectedFile: File) => {
     setUploading(true)
     setMessage(null)
     setIsError(false)
 
     const formData = new FormData()
-    formData.append('file', file)
+    formData.append('file', selectedFile)
 
     try {
       const res = await fetch('http://localhost:8000/api/documents/upload', {
@@ -61,7 +46,7 @@ export default function DocumentScanModal({ isOpen, onClose, onSuccess }: Docume
       }
 
       const data = await res.json()
-      const successMsg = data.message || `Successfully processed "${file.name}". Portfolio updated!`
+      const successMsg = data.message || `Successfully processed "${selectedFile.name}". Portfolio updated!`
       setMessage(successMsg)
       setFile(null)
       window.dispatchEvent(new CustomEvent('halo:wealth_updated'))
@@ -71,6 +56,30 @@ export default function DocumentScanModal({ isOpen, onClose, onSuccess }: Docume
       setMessage(e.message || 'Error uploading document')
     } finally {
       setUploading(false)
+    }
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(false)
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      const dropped = e.dataTransfer.files[0]
+      setFile(dropped)
+      uploadSelectedFile(dropped)
+    }
+  }
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const selected = e.target.files[0]
+      setFile(selected)
+      uploadSelectedFile(selected)
+    }
+  }
+
+  const handleUpload = async () => {
+    if (file) {
+      uploadSelectedFile(file)
     }
   }
 
