@@ -286,13 +286,13 @@ def compute_income_tax(
     # --- Standard deduction ---
     std_deduction = 0
     if regime == Regime.NEW:
-        reg_rules = rules["new_regime"]
+        reg_rules = rules.get("new_regime", {})
         std_cfg = rules.get("standard_deduction", {})
         std_deduction = int(std_cfg.get("salaried", 0))
         if not std_cfg.get("verified", True):
             unverified.append(f"Standard deduction {fmt_inr(std_deduction)} — verify against Finance Act")
     else:
-        reg_rules = rules["old_regime"]
+        reg_rules = rules.get("old_regime", {})
         std_deduction = 75000  # same for now; TODO: read from old_regime in rules
         assumptions.append("Standard deduction ₹75,000 assumed for old regime FY 2024-25")
 
@@ -319,10 +319,10 @@ def compute_income_tax(
     )
 
     # --- Slab tax ---
-    slabs: list[dict] = reg_rules["slabs"] if isinstance(reg_rules.get("slabs"), list) else []
+    slabs: list[dict] = reg_rules.get("slabs", []) if isinstance(reg_rules.get("slabs"), list) else []
     if not slabs:
         # Old regime individual below 60
-        slabs = rules["old_regime"].get("slabs_individual_below_60", [])
+        slabs = rules.get("old_regime", {}).get("slabs_individual_below_60", [])
         assumptions.append("Using slabs for individual below 60 years for old regime")
 
     slab_tax, slab_breakdown = _compute_slab_tax(net_taxable, slabs)

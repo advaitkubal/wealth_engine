@@ -438,3 +438,24 @@ class TestSection234Interest:
             "2025-03-15": 0
         }, fy="2024-25")
         assert res["interest_234C"] == 5050
+
+
+class TestTaxComplianceSummary:
+    def test_compliance_summary_2024_25(self):
+        from app.api.tax import get_tax_compliance_summary
+        summary = get_tax_compliance_summary(income=2400000, fy="2024-25")
+        assert summary.annual_income == 2400000
+        assert summary.new_regime_tax == 292500
+        assert summary.standard_deduction == 75000
+        assert summary.q1_due == int(round(292500 * 0.15))
+        assert summary.q4_due == 292500
+        assert summary.compliance_score_pct == 95
+        assert len(summary.active_exemptions) >= 3
+
+    def test_compliance_summary_edge_case_zero_income(self):
+        from app.api.tax import get_tax_compliance_summary
+        summary = get_tax_compliance_summary(income=0, fy="2024-25")
+        assert summary.new_regime_tax == 0
+        assert summary.q1_due == 0
+        assert summary.effective_rate_pct == 0.0
+

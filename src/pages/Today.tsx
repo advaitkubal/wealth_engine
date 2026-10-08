@@ -26,10 +26,31 @@ const MOCK_DATA = [
   { name: 'Jul', val: 341 },
 ]
 
+interface TaxComplianceStatus {
+  fy: string
+  annual_income: number
+  new_regime_tax: number
+  old_regime_tax: number
+  recommended_regime: string
+  standard_deduction: number
+  effective_rate_pct: number
+  q1_due: number
+  q2_due: number
+  q3_due: number
+  q4_due: number
+  next_installment_date: string
+  next_installment_amount: number
+  sec_234c_status: string
+  compliance_score_pct: number
+  active_exemptions: string[]
+}
+
 export default function Today() {
   const [query, setQuery] = useState('')
   const [score, setScore] = useState(850)
   const [summary, setSummary] = useState<any>(null)
+  const [taxCompliance, setTaxCompliance] = useState<TaxComplianceStatus | null>(null)
+  const [selectedFy, setSelectedFy] = useState<string>('2024-25')
   const [isScanOpen, setIsScanOpen] = useState(false)
   const [cibilSyncing, setCibilSyncing] = useState(false)
   const [cibilMsg, setCibilMsg] = useState<string | null>(null)
@@ -46,8 +67,16 @@ export default function Today() {
       .catch(console.error)
   }
 
+  const fetchTaxCompliance = (fyParam = selectedFy) => {
+    fetch(`http://localhost:8000/api/tax/compliance-summary?income=2400000&fy=${fyParam}`)
+      .then(r => r.json())
+      .then(data => setTaxCompliance(data))
+      .catch(console.error)
+  }
+
   useEffect(() => {
     fetchSummary()
+    fetchTaxCompliance(selectedFy)
     fetch('http://localhost:8000/api/intelligence/halo-score')
       .then(r => r.json())
       .then(data => setScore(data.score))
@@ -55,10 +84,11 @@ export default function Today() {
 
     const handleUpdate = () => {
       fetchSummary()
+      fetchTaxCompliance(selectedFy)
     }
     window.addEventListener('halo:wealth_updated', handleUpdate)
     return () => window.removeEventListener('halo:wealth_updated', handleUpdate)
-  }, [])
+  }, [selectedFy])
 
   const handleAsk = () => {
     if (!query.trim()) return
@@ -222,34 +252,90 @@ export default function Today() {
         {/* Tax Liability Meter Card */}
         <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-6 flex flex-col justify-between">
           <div>
-            <div className="flex justify-between items-center mb-4">
+            <div className="flex justify-between items-center mb-2">
               <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Tax Meter &amp; Compliance</p>
-              <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full">FY 2024-25</span>
+              <button
+                onClick={() => setSelectedFy(f => f === '2024-25' ? '2025-26' : '2024-25')}
+                className="text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-0.5 rounded-full transition-colors flex items-center gap-1"
+                title="Click to toggle FY rule year"
+              >
+                FY {selectedFy} ⟳
+              </button>
             </div>
 
-            <div className="flex flex-col items-center justify-center my-4">
-              <div className="relative w-44 h-22 overflow-hidden mb-2">
-                <div className="absolute top-0 left-0 w-44 h-44 rounded-full border-[14px] border-slate-100"></div>
-                <div className="absolute top-0 left-0 w-44 h-44 rounded-full border-[14px] border-indigo-600" style={{ clipPath: 'polygon(0 50%, 100% 50%, 100% 100%, 0 100%)', transform: 'rotate(130deg)' }}></div>
-              </div>
-              <div className="-mt-12 text-center">
-                <p className="text-[11px] text-slate-400 font-medium">Annual Tax Liability</p>
-                <h3 className="text-2xl font-extrabold text-slate-900">₹1,09,200</h3>
+            {/* Dynamic SVG Semi-Circle Gauge */}
+            <div className="flex flex-col items-center justify-center my-3">
+              <div className="relative w-48 h-26 flex flex-col items-center justify-end">
+                <svg viewBox="0 0 160 90" className="w-48 h-28 overflow-visible">
+                  <defs>
+                    <linearGradient id="meterGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" stopColor="#10b981" />
+                      <stop offset="50%" stopColor="#6366f1" />
+                      <stop offset="100%" stopColor="#f43f5e" />
+                    </linearGradient>
+                  </defs>
+                  {/* Background Track */}
+                  <path
+                    d="M 15 80 A 65 65 0 0 1 145 80"
+                    fill="none"
+                    stroke="#f1f5f9"
+                    strokeWidth="12"
+                    strokeLinecap="round"
+                  />
+                  {/* Active Value Arc */}
+                  <path
+                    d="M 15 80 A 65 65 0 0 1 145 80"
+                    fill="none"
+                    stroke="url(#meterGradient)"
+                    strokeWidth="12"
+                    strokeLinecap="round"
+                    strokeDasharray="204.2"
+                    strokeDashoffset={204.2 * (1 - Math.min(1, Math.max(0.05, (taxCompliance?.effective_rate_pct || 12.19) / 30)))}
+                    className="transition-all duration-700 ease-out"
+                  />
+                </svg>
+                <div className="absolute bottom-1 text-center">
+                  <p className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Annual Tax Liability</p>
+                  <h3 className="text-2xl font-black text-slate-900 tracking-tight">
+                    ₹{(taxCompliance?.new_regime_tax || 292500).toLocaleString('en-IN')}
+                  </h3>
+                  <span className="inline-block text-[11px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full mt-0.5">
+                    {taxCompliance?.effective_rate_pct || 12.19}% Effective Rate
+                  </span>
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="space-y-3 pt-3 border-t border-gray-100">
-            <div className="w-full bg-slate-50 rounded-xl p-3 flex justify-between items-center text-xs">
-              <span className="text-slate-500 font-medium">Next Advance Tax:</span>
-              <span className="font-bold text-slate-900">15 Sep (₹27,300)</span>
+          <div className="space-y-2.5 pt-3 border-t border-gray-100">
+            {/* Regime recommendation pill */}
+            <div className="bg-emerald-50/80 border border-emerald-100 rounded-xl px-3 py-1.5 flex items-center justify-between text-xs">
+              <span className="text-emerald-800 font-semibold truncate">
+                {taxCompliance?.recommended_regime || 'New Regime (Budget 2024)'}
+              </span>
+              <span className="text-emerald-700 font-extrabold text-[11px] shrink-0 ml-2">
+                Save ₹{((taxCompliance?.old_regime_tax || 530400) - (taxCompliance?.new_regime_tax || 292500)).toLocaleString('en-IN')}
+              </span>
             </div>
-            <button
-              onClick={() => navigate('/tax-rules')}
-              className="w-full text-center text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors"
-            >
-              Audit Tax Slab Rules ↗
-            </button>
+
+            <div className="w-full bg-slate-50 border border-slate-100 rounded-xl p-2.5 flex justify-between items-center text-xs">
+              <span className="text-slate-500 font-medium">Next Advance Tax:</span>
+              <span className="font-bold text-slate-900">
+                {taxCompliance?.next_installment_date || '15 Dec'} (₹{(taxCompliance?.next_installment_amount || 87750).toLocaleString('en-IN')})
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between text-xs pt-1">
+              <span className="text-[11px] font-semibold text-emerald-600 flex items-center gap-1">
+                <CheckCircle2 className="w-3.5 h-3.5" /> {taxCompliance?.sec_234c_status || 'Compliant (0 Penalty)'}
+              </span>
+              <button
+                onClick={() => navigate('/tax-rules')}
+                className="text-xs font-bold text-indigo-600 hover:text-indigo-800 transition-colors"
+              >
+                Audit Slabs ↗
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -310,34 +396,53 @@ export default function Today() {
               <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
                 <Calendar className="w-5 h-5 text-indigo-600" /> Compliance &amp; Tax Deadlines
               </h3>
-              <span className="text-xs text-slate-400 font-medium">CBDT &amp; RBI Schedule</span>
+              <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full">
+                {taxCompliance?.compliance_score_pct || 95}% Compliant
+              </span>
             </div>
             <p className="text-xs text-slate-500 mb-4">
-              Never miss statutory penalty dates (Section 234B/C interest prevention).
+              CBDT statutory advance tax schedule &amp; Section 234C interest penalty mitigation.
             </p>
 
-            <div className="space-y-3">
-              <div className="flex items-center gap-3 p-3 rounded-2xl bg-indigo-50/60 border border-indigo-100/60">
-                <div className="text-center font-bold text-indigo-600 shrink-0 w-12 text-xs">
-                  <div className="text-[10px] uppercase font-semibold text-indigo-400">SEP</div>
-                  <div className="text-base">15</div>
-                </div>
-                <div className="text-xs">
-                  <p className="font-bold text-indigo-950">Q2 Advance Tax Installment</p>
-                  <p className="text-indigo-600 text-[11px]">Pay 45% of cumulative tax liability to avoid 1% monthly Sec 234C interest.</p>
-                </div>
+            {/* Advance Tax Installment Timeline */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+              <div className="p-2.5 rounded-2xl bg-slate-50 border border-slate-100 text-center">
+                <p className="text-[10px] uppercase font-bold text-slate-400">15 Jun (15%)</p>
+                <p className="text-xs font-extrabold text-slate-800 mt-0.5">₹{(taxCompliance?.q1_due || 43875).toLocaleString('en-IN')}</p>
+                <span className="inline-block text-[9px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded-full mt-1">Paid</span>
               </div>
 
-              <div className="flex items-center gap-3 p-3 rounded-2xl bg-slate-50 border border-slate-100">
-                <div className="text-center font-bold text-slate-600 shrink-0 w-12 text-xs">
-                  <div className="text-[10px] uppercase font-semibold text-slate-400">MAR</div>
-                  <div className="text-base">31</div>
-                </div>
-                <div className="text-xs">
-                  <p className="font-bold text-slate-900">FY 2024-25 Tax Year Closes</p>
-                  <p className="text-slate-500 text-[11px]">Last date for 80C investments, SGB tax-loss harvesting, and PPF deposits.</p>
-                </div>
+              <div className="p-2.5 rounded-2xl bg-slate-50 border border-slate-100 text-center">
+                <p className="text-[10px] uppercase font-bold text-slate-400">15 Sep (45%)</p>
+                <p className="text-xs font-extrabold text-slate-800 mt-0.5">₹{(taxCompliance?.q2_due || 131625).toLocaleString('en-IN')}</p>
+                <span className="inline-block text-[9px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded-full mt-1">Paid</span>
               </div>
+
+              <div className="p-2.5 rounded-2xl bg-indigo-50 border border-indigo-200 text-center ring-2 ring-indigo-500/20">
+                <p className="text-[10px] uppercase font-bold text-indigo-600">15 Dec (75%)</p>
+                <p className="text-xs font-extrabold text-indigo-950 mt-0.5">₹{(taxCompliance?.q3_due || 219375).toLocaleString('en-IN')}</p>
+                <span className="inline-block text-[9px] font-bold text-indigo-700 bg-indigo-100 px-1.5 py-0.2 rounded-full mt-1">Due Next</span>
+              </div>
+
+              <div className="p-2.5 rounded-2xl bg-slate-50 border border-slate-100 text-center">
+                <p className="text-[10px] uppercase font-bold text-slate-400">15 Mar (100%)</p>
+                <p className="text-xs font-extrabold text-slate-800 mt-0.5">₹{(taxCompliance?.q4_due || 292500).toLocaleString('en-IN')}</p>
+                <span className="inline-block text-[9px] font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.2 rounded-full mt-1">Upcoming</span>
+              </div>
+            </div>
+
+            {/* Active Deductions & Exemptions recognized by pure engine */}
+            <div className="space-y-1.5 mt-2">
+              {(taxCompliance?.active_exemptions || [
+                '₹75,000 Standard Deduction (Budget 2024)',
+                'Section 87A Marginal Relief Slabs',
+                '4% Health & Education Cess Reconciled'
+              ]).map((exemption, idx) => (
+                <div key={idx} className="flex items-center gap-2 text-[11px] text-slate-600">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <span>{exemption}</span>
+                </div>
+              ))}
             </div>
           </div>
 
