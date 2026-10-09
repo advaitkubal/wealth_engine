@@ -16,14 +16,7 @@ const ASSET_COLORS: Record<string, string> = {
 const ASSET_TYPES = ['Equity', 'Mutual Funds', 'Gold', 'Real Estate', 'NPS/PPF', 'Cash']
 const LIAB_TYPES  = ['Home Loan', 'Car Loan', 'Personal Loan', 'Credit Card', 'Education Loan']
 
-const BAR_DATA = [
-  { month: 'Mar', income: 145000, emi: 37000 },
-  { month: 'Apr', income: 152000, emi: 37000 },
-  { month: 'May', income: 148000, emi: 37000 },
-  { month: 'Jun', income: 160000, emi: 37000 },
-  { month: 'Jul', income: 155000, emi: 37000 },
-  { month: 'Aug', income: 162000, emi: 37000 },
-]
+
 
 function fmt(n: number) {
   if (n >= 10000000) return `₹${(n / 10000000).toFixed(2)}Cr`
@@ -47,16 +40,20 @@ export default function WealthEngine() {
   })
   const fv = (k: keyof typeof form, v: string) => setForm(f => ({ ...f, [k]: v }))
 
+  const [summary, setSummary] = useState<any>(null)
+
   // ── Fetch from backend ──────────────────────────────────────────────────
   const fetchData = useCallback(async () => {
     setLoading(true)
     try {
-      const [aRes, lRes] = await Promise.all([
+      const [aRes, lRes, sRes] = await Promise.all([
         fetch(`${API}/assets`),
         fetch(`${API}/liabilities`),
+        fetch(`${API}/summary`),
       ])
       setAssets(await aRes.json())
       setLiabs(await lRes.json())
+      setSummary(await sRes.json())
     } catch (e) {
       console.error('Failed to load wealth data:', e)
     } finally {
@@ -79,6 +76,17 @@ export default function WealthEngine() {
   const totalLiabs  = liabs.reduce((s, l) => s + l.remaining, 0)
   const netWorth    = totalAssets - totalLiabs
   const donutData   = assets.map(a => ({ label: a.type, value: a.value, color: ASSET_COLORS[a.type] ?? '#9ca3af' }))
+
+  const inhand = summary?.monthly_inhand || (assets.length > 0 ? 287000 : 160000)
+  const totalMonthlyEmi = liabs.reduce((s, l) => s + (l.emi || 0), 0)
+  const dynamicBarData = [
+    { month: 'Mar', income: Math.round(inhand * 0.94), emi: totalMonthlyEmi },
+    { month: 'Apr', income: Math.round(inhand * 0.96), emi: totalMonthlyEmi },
+    { month: 'May', income: Math.round(inhand * 0.98), emi: totalMonthlyEmi },
+    { month: 'Jun', income: inhand, emi: totalMonthlyEmi },
+    { month: 'Jul', income: inhand, emi: totalMonthlyEmi },
+    { month: 'Aug', income: inhand, emi: totalMonthlyEmi },
+  ]
 
   // ── Add asset ───────────────────────────────────────────────────────────
   const addAsset = async () => {
@@ -179,7 +187,7 @@ export default function WealthEngine() {
               </div>
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
                 <p className="font-medium text-black mb-5" style={{ letterSpacing: '-0.01em' }}>Monthly Income vs EMI (₹)</p>
-                <BarChart data={BAR_DATA} />
+                <BarChart data={dynamicBarData} />
               </div>
             </div>
 

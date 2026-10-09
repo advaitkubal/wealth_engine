@@ -67,6 +67,7 @@ async def upload_document(background_tasks: BackgroundTasks, file: UploadFile = 
                         "INSERT INTO liabilities(type, label, remaining, rate, emi, tenure, created_at, updated_at) VALUES(?,?,?,?,?,?,?,?)",
                         (l["type"], l["label"], l["remaining"], l["rate"], l["emi"], l["tenure"], upload_date, upload_date)
                     )
+                    reconciled_liabs += 1
             # If income was detected, update user_profile table
             if extracted.get("gross_income") and extracted["gross_income"] > 0:
                 ann_inc = extracted["gross_income"]
@@ -78,7 +79,8 @@ async def upload_document(background_tasks: BackgroundTasks, file: UploadFile = 
                     (ann_inc, inhand_est, 65000, upload_date)
                 )
     except Exception as e:
-        pass
+        import logging
+        logging.getLogger(__name__).error(f"Error extracting portfolio from PDF: {e}", exc_info=True)
 
     # 2. Add background semantic ingestion for RAG vector search
     background_tasks.add_task(ingestion_pipeline.ingest_pdf, file_path, doc_id, safe_name)

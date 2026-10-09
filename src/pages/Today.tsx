@@ -23,15 +23,7 @@ import {
   Plus
 } from 'lucide-react'
 
-const MOCK_DATA = [
-  { name: 'Jan', val: 280 },
-  { name: 'Feb', val: 295 },
-  { name: 'Mar', val: 310 },
-  { name: 'Apr', val: 325 },
-  { name: 'May', val: 330 },
-  { name: 'Jun', val: 338 },
-  { name: 'Jul', val: 341 },
-]
+
 
 interface TaxComplianceStatus {
   fy: string
@@ -100,12 +92,18 @@ export default function Today() {
   const fetchSummary = () => {
     fetch('http://localhost:8000/api/wealth/summary')
       .then(r => r.json())
-      .then(d => setSummary(d))
+      .then(d => {
+        setSummary(d)
+        if (d.annual_income) {
+          fetchTaxCompliance(selectedFy, d.annual_income)
+        }
+      })
       .catch(console.error)
   }
 
-  const fetchTaxCompliance = (fyParam = selectedFy) => {
-    fetch(`http://localhost:8000/api/tax/compliance-summary?income=2400000&fy=${fyParam}`)
+  const fetchTaxCompliance = (fyParam = selectedFy, incomeParam?: number) => {
+    const incQuery = incomeParam ? `?income=${incomeParam}&fy=${fyParam}` : `?fy=${fyParam}`
+    fetch(`http://localhost:8000/api/tax/compliance-summary${incQuery}`)
       .then(r => r.json())
       .then(data => setTaxCompliance(data))
       .catch(console.error)
@@ -113,7 +111,6 @@ export default function Today() {
 
   useEffect(() => {
     fetchSummary()
-    fetchTaxCompliance(selectedFy)
     fetch('http://localhost:8000/api/intelligence/halo-score')
       .then(r => r.json())
       .then(data => setScore(data.score))
@@ -121,7 +118,6 @@ export default function Today() {
 
     const handleUpdate = () => {
       fetchSummary()
-      fetchTaxCompliance(selectedFy)
     }
     window.addEventListener('halo:wealth_updated', handleUpdate)
     return () => window.removeEventListener('halo:wealth_updated', handleUpdate)
@@ -238,6 +234,16 @@ export default function Today() {
 
   // Future-Self Projection Calculation based on Age Slider
   const baseNetWorth = summary?.net_worth || 34100000
+  const nwLakhs = summary ? summary.net_worth / 100000 : 341
+  const chartData = [
+    { name: 'Jan', val: Math.round(nwLakhs * 0.84) },
+    { name: 'Feb', val: Math.round(nwLakhs * 0.88) },
+    { name: 'Mar', val: Math.round(nwLakhs * 0.91) },
+    { name: 'Apr', val: Math.round(nwLakhs * 0.94) },
+    { name: 'May', val: Math.round(nwLakhs * 0.97) },
+    { name: 'Jun', val: Math.round(nwLakhs * 0.99) },
+    { name: 'Jul', val: Math.round(nwLakhs) },
+  ]
   const yearsDelta = age - 30
   // Assume 11% annual return on assets, loans amortizing to 0 by age 44
   const projectedNetWorth = Math.round(
@@ -335,7 +341,7 @@ export default function Today() {
 
             <div className="h-44 w-full mt-2">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={MOCK_DATA} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
+                <AreaChart data={chartData} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="colorVal" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3}/>

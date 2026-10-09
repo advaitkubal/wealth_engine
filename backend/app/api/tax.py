@@ -67,13 +67,18 @@ class TaxComplianceStatus(BaseModel):
     active_exemptions: List[str]
 
 @router.get("/compliance-summary", response_model=TaxComplianceStatus)
-def get_tax_compliance_summary(income: int = 2400000, fy: Optional[str] = None):
+def get_tax_compliance_summary(income: Optional[int] = None, fy: Optional[str] = None):
     """
     Returns accurate live tax computation and statutory compliance calendar
     evaluated directly by the deterministic Python tax engine (FY 2024-25).
     """
     if not fy:
         fy = "2024-25"
+
+    if income is None:
+        with database.get_db() as conn:
+            row = conn.execute("SELECT annual_income FROM user_profile LIMIT 1").fetchone()
+            income = int(row['annual_income']) if row and row['annual_income'] else 2400000
 
     # 1. Compute New Regime Tax via pure engine
     new_tax_result = compute_income_tax(gross_salary=income, regime=Regime.NEW, fy=fy)

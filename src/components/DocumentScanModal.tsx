@@ -169,14 +169,29 @@ export default function DocumentScanModal({ isOpen, onClose, onSuccess }: Docume
 
         {message && (
           <div
-            className={`mt-4 p-4 rounded-xl text-xs flex items-center gap-2 ${
+            className={`mt-4 p-4 rounded-2xl text-xs flex flex-col gap-2.5 ${
               isError
                 ? 'bg-rose-50 text-rose-700 border border-rose-100'
-                : 'bg-emerald-50 text-emerald-700 border border-emerald-100'
+                : 'bg-emerald-50 text-emerald-800 border border-emerald-200/80 shadow-xs'
             }`}
           >
-            {isError ? <AlertCircle className="w-4 h-4 shrink-0" /> : <CheckCircle2 className="w-4 h-4 shrink-0" />}
-            <span>{message}</span>
+            <div className="flex items-center gap-2">
+              {isError ? <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" /> : <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />}
+              <span className="font-semibold">{message}</span>
+            </div>
+            {!isError && (
+              <button
+                type="button"
+                onClick={() => {
+                  window.dispatchEvent(new CustomEvent('halo:wealth_updated'))
+                  if (onSuccess) onSuccess()
+                  onClose()
+                }}
+                className="self-end px-3.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold transition-all shadow-xs"
+              >
+                ✨ View Updated Dashboard
+              </button>
+            )}
           </div>
         )}
 
@@ -185,7 +200,7 @@ export default function DocumentScanModal({ isOpen, onClose, onSuccess }: Docume
             onClick={onClose}
             className="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-700 text-sm font-medium hover:bg-slate-50"
           >
-            Cancel
+            {message && !isError ? 'Close' : 'Cancel'}
           </button>
           <button
             disabled={!file || uploading}
@@ -194,7 +209,7 @@ export default function DocumentScanModal({ isOpen, onClose, onSuccess }: Docume
           >
             {uploading ? (
               <>
-                <Loader2 className="w-4 h-4 animate-spin" /> Ingesting...
+                <Loader2 className="w-4 h-4 animate-spin" /> Processing On-Device...
               </>
             ) : (
               'Start Scanning'
