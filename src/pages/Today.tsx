@@ -4,6 +4,7 @@ import { useNavigate } from '../router'
 import VoiceMicButton from '../components/VoiceMicButton'
 import DocumentScanModal from '../components/DocumentScanModal'
 import DebtIngestionModal from '../components/DebtIngestionModal'
+import CADossierModal from '../components/CADossierModal'
 import MoneyFlowVisualizer from '../components/MoneyFlowVisualizer'
 import { ChatCard } from '../components/ChatCard'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -20,7 +21,8 @@ import {
   Send,
   X,
   Trash2,
-  Plus
+  Plus,
+  FileSpreadsheet,
 } from 'lucide-react'
 
 
@@ -66,6 +68,7 @@ export default function Today() {
   const [selectedFy, setSelectedFy] = useState<string>('2024-25')
   const [isScanOpen, setIsScanOpen] = useState(false)
   const [isDebtModalOpen, setIsDebtModalOpen] = useState(false)
+  const [isCADossierOpen, setIsCADossierOpen] = useState(false)
   const [cibilMsg, setCibilMsg] = useState<string | null>(null)
 
   // Interactive Future-Self Time Machine Age State
@@ -266,6 +269,15 @@ export default function Today() {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
+          <button
+            onClick={() => setIsCADossierOpen(true)}
+            className="bg-[#2B2644] hover:bg-black text-white rounded-full px-4 py-2.5 text-xs font-bold flex items-center gap-2 transition-all shadow-md shadow-slate-900/10 hover:scale-105"
+            title="Open comprehensive Chartered Accountant Tax & Wealth Dossier"
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
+            <span>📋 CA Tax Dossier</span>
+          </button>
+
           <button
             onClick={() => setIsScanOpen(true)}
             className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-full px-5 py-2.5 text-xs font-bold flex items-center gap-2 transition-all shadow-md shadow-indigo-100 hover:scale-105"
@@ -860,6 +872,11 @@ export default function Today() {
           setIsDebtModalOpen(false)
           fetchSummary()
         }}
+      />
+
+      <CADossierModal
+        isOpen={isCADossierOpen}
+        onClose={() => setIsCADossierOpen(false)}
       />
     </div>
   )

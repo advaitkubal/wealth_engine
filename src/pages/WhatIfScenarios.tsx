@@ -10,12 +10,14 @@ import {
   HeartPulse
 } from 'lucide-react'
 import { generateCADossierPDF } from '../utils/caDossierPdf'
+import CADossierModal from '../components/CADossierModal'
 
 type TabType = 'job_switch' | 'prepay' | 'emergency' | 'early_fire' | 'medical' | 'ca_pack'
 
 export default function WhatIfScenarios() {
   const [activeTab, setActiveTab] = useState<TabType>('job_switch')
   const [portfolio, setPortfolio] = useState<any>(null)
+  const [isCADossierOpen, setIsCADossierOpen] = useState(false)
 
   // Job Switch State
   const [currentCtc, setCurrentCtc] = useState<number>(3000000) // 30L
@@ -155,10 +157,10 @@ export default function WhatIfScenarios() {
           </div>
 
           <button
-            onClick={handleDownloadCAPack}
+            onClick={() => setIsCADossierOpen(true)}
             className="self-start md:self-auto bg-[#2B2644] hover:bg-black text-white text-sm font-semibold px-6 py-3.5 rounded-2xl flex items-center gap-2.5 shadow-md hover:shadow-lg transition-all"
           >
-            <FileDown className="w-4 h-4 text-emerald-400" /> Export CA Handoff Pack (PDF)
+            <FileDown className="w-4 h-4 text-emerald-400" /> View &amp; Export CA Dossier
           </button>
         </div>
 
@@ -699,16 +701,30 @@ export default function WhatIfScenarios() {
               </div>
             </div>
 
-            <button
-              onClick={handleDownloadCAPack}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-base px-8 py-4 rounded-2xl shadow-lg hover:shadow-indigo-500/20 transition-all inline-flex items-center gap-2"
-            >
-              <FileDown className="w-5 h-5" /> Download CA Dossier PDF Now
-            </button>
-            <p className="text-xs text-slate-400 mt-3">PDF is assembled locally inside your browser. Zero telemetry or network egress.</p>
+            <div className="flex flex-wrap items-center justify-center gap-4">
+              <button
+                onClick={() => setIsCADossierOpen(true)}
+                className="bg-[#2B2644] hover:bg-black text-white font-semibold text-base px-7 py-4 rounded-2xl shadow-lg transition-all inline-flex items-center gap-2"
+              >
+                <span>✨ Preview Interactive CA Dossier</span>
+              </button>
+
+              <button
+                onClick={handleDownloadCAPack}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-base px-7 py-4 rounded-2xl shadow-lg hover:shadow-indigo-500/20 transition-all inline-flex items-center gap-2"
+              >
+                <FileDown className="w-5 h-5" /> Download PDF Now
+              </button>
+            </div>
+            <p className="text-xs text-slate-400 mt-4">PDF is assembled locally inside your browser. Zero telemetry or network egress.</p>
           </div>
         )}
       </div>
+
+      <CADossierModal
+        isOpen={isCADossierOpen}
+        onClose={() => setIsCADossierOpen(false)}
+      />
     </div>
   )
 }
