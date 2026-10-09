@@ -357,24 +357,35 @@ def execute_tool(name: str, args: dict) -> str:
             with database.get_db() as conn:
                 assets = [dict(r) for r in conn.execute("SELECT * FROM assets ORDER BY id").fetchall()]
                 liabs  = [dict(r) for r in conn.execute("SELECT * FROM liabilities ORDER BY id").fetchall()]
+                prof = conn.execute("SELECT annual_income, monthly_inhand, monthly_expenses FROM user_profile LIMIT 1").fetchone()
+                ann_inc = int(prof["annual_income"]) if prof and prof["annual_income"] else 2400000
+                inhand = int(prof["monthly_inhand"]) if prof and prof["monthly_inhand"] else 160000
+                exp = int(prof["monthly_expenses"]) if prof and prof["monthly_expenses"] else 55000
+
             total_a = sum(a["value"] for a in assets)
             total_l = sum(liab["remaining"] for liab in liabs)
+            total_emi = sum(liab["emi"] for liab in liabs)
             net     = total_a - total_l
-
-            def fmt(n): return f"₹{n/100000:.2f}L" if n >= 100000 else f"₹{n:,.0f}"
+            surplus = max(0, inhand - total_emi - exp)
 
             lines = [
-                f"NET WORTH: {fmt(net)}",
-                f"Total Assets: {fmt(total_a)}  |  Total Liabilities: {fmt(total_l)}",
+                f"=== LIVE USER FINANCIAL PORTFOLIO ===",
+                f"• User: Advait",
+                f"• Consolidated Net Worth: {fmt_inr(net)}",
+                f"• Total Assets: {fmt_inr(total_a)} ({len(assets)} holdings)",
+                f"• Total Debt / Liabilities: {fmt_inr(total_l)} (Total EMI: {fmt_inr(total_emi)}/month)",
+                f"• Monthly In-Hand Cash: {fmt_inr(inhand)} / month (Annual CTC: {fmt_inr(ann_inc)})",
+                f"• Monthly Living Expenses: {fmt_inr(exp)} / month",
+                f"• Monthly Net Surplus: {fmt_inr(surplus)} / month",
                 "",
-                "ASSETS:",
+                "ASSETS BREAKDOWN:",
             ]
             for a in assets:
-                lines.append(f"  [ID:{a['id']}] {a['label']} ({a['type']}) — {fmt(a['value'])} @ {a['yield_pct']}% p.a.")
+                lines.append(f"  • [ID:{a['id']}] {a['type']}: {fmt_inr(a['value'])} — {a['label']} (Expected yield: {a['yield_pct']}% p.a.)")
             lines.append("")
-            lines.append("LIABILITIES:")
+            lines.append("LIABILITIES BREAKDOWN:")
             for liab in liabs:
-                lines.append(f"  [ID:{liab['id']}] {liab['label']} ({liab['type']}) — {fmt(liab['remaining'])} outstanding, {liab['rate']}% p.a., EMI {fmt(liab['emi'])}/mo, {liab['tenure']} months left")
+                lines.append(f"  • [ID:{liab['id']}] {liab['type']}: {fmt_inr(liab['remaining'])} — {liab['label']} @ {liab['rate']}% interest, EMI: {fmt_inr(liab['emi'])}/mo, {liab['tenure']} months left")
             return "\n".join(lines)
 
         elif name == "add_asset":
@@ -677,7 +688,9 @@ def execute_tool(name: str, args: dict) -> str:
             side_inc = int(round(parse_indian_currency(args.get("side_income", 0))))
             base_sal_val = args.get("base_salary")
             if base_sal_val is None or str(base_sal_val).strip() == "":
-                base_sal = 2400000  # standard profile salary
+                with database.get_db() as conn:
+                    row = conn.execute("SELECT annual_income FROM user_profile LIMIT 1").fetchone()
+                    base_sal = int(row['annual_income']) if row and row['annual_income'] else 2400000
             else:
                 base_sal = int(round(parse_indian_currency(base_sal_val)))
 

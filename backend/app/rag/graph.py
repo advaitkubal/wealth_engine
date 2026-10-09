@@ -64,6 +64,63 @@ def check_relevance(state: GraphState):
     return {"confidence": max_score}
 
 
+def get_live_user_context_string() -> str:
+    """
+    Builds a real-time, personalized financial context string directly from the user's
+    live SQLite database (assets, liabilities, user_profile, documents).
+    """
+    from app.database import database
+    from app.tax_engine import fmt_inr
+    
+    try:
+        with database.get_db() as conn:
+            prof = conn.execute("SELECT annual_income, monthly_inhand, monthly_expenses FROM user_profile LIMIT 1").fetchone()
+            annual_inc = int(prof["annual_income"]) if prof and prof["annual_income"] else 2400000
+            monthly_inhand = int(prof["monthly_inhand"]) if prof and prof["monthly_inhand"] else 160000
+            monthly_exp = int(prof["monthly_expenses"]) if prof and prof["monthly_expenses"] else 55000
+
+            asset_rows = [dict(r) for r in conn.execute("SELECT type, label, value, yield_pct FROM assets ORDER BY value DESC").fetchall()]
+            total_assets = int(sum(r["value"] for r in asset_rows))
+
+            liab_rows = [dict(r) for r in conn.execute("SELECT type, label, remaining, rate, emi, tenure FROM liabilities ORDER BY remaining DESC").fetchall()]
+            total_debt = int(sum(r["remaining"] for r in liab_rows))
+            total_emi = int(sum(r["emi"] for r in liab_rows))
+
+            doc_rows = [dict(r) for r in conn.execute("SELECT filename, status FROM documents ORDER BY id DESC LIMIT 5").fetchall()]
+
+            net_worth = total_assets - total_debt
+            monthly_surplus = max(0, monthly_inhand - total_emi - monthly_exp)
+
+            lines = [
+                "=== LIVE PERSONAL FINANCIAL PROFILE (100% On-Device Synced Data) ===",
+                f"• User Name: Advait",
+                f"• Consolidated Net Worth: {fmt_inr(net_worth)}",
+                f"• Total Assets: {fmt_inr(total_assets)} ({len(asset_rows)} holdings):",
+            ]
+            for a in asset_rows:
+                lines.append(f"   - {a['type']}: {fmt_inr(int(a['value']))} — {a['label']} (Expected yield: {a['yield_pct']}% p.a.)")
+
+            lines.append(f"• Active Debt & Loans: {fmt_inr(total_debt)} ({len(liab_rows)} active loans, Total EMI: {fmt_inr(total_emi)}/month):")
+            for l in liab_rows:
+                lines.append(f"   - {l['type']}: {fmt_inr(int(l['remaining']))} balance — {l['label']} @ {l['rate']}% interest, EMI: {fmt_inr(int(l['emi']))}/mo, {l['tenure']} months left")
+
+            lines.append(f"• Income & Cash Flow:")
+            lines.append(f"   - Annual Salary (Gross CTC): {fmt_inr(annual_inc)}")
+            lines.append(f"   - Monthly In-Hand Take-Home: {fmt_inr(monthly_inhand)} / month")
+            lines.append(f"   - Monthly Living Expenses: {fmt_inr(monthly_exp)} / month")
+            lines.append(f"   - Monthly Net Surplus (Savings Potential): {fmt_inr(monthly_surplus)} / month")
+
+            if doc_rows:
+                docs_str = ", ".join([f"{d['filename']} ({d['status']})" for d in doc_rows])
+                lines.append(f"• Synced Statement Documents: {docs_str}")
+
+            lines.append("=========================================================================")
+            return "\n".join(lines)
+    except Exception as e:
+        logger.warning(f"Error building live user context: {e}")
+        return ""
+
+
 def generate_with_tools(state: GraphState):
     """
     Build the message list and call the LLM with tools.
@@ -79,9 +136,11 @@ def generate_with_tools(state: GraphState):
     if chunks and confidence >= settings.SIMILARITY_THRESHOLD:
         context_str = retriever.format_context(chunks)
 
-    # First call: build the initial message list
+    # First call: build the initial message list with live user portfolio context
     if not messages:
+        user_profile_context = get_live_user_context_string()
         user_content = prompts.RAG_PROMPT_TEMPLATE.format(
+            user_profile_context=user_profile_context,
             context=context_str,
             question=state["question"],
         )
@@ -101,6 +160,12 @@ def generate_with_tools(state: GraphState):
     tool_rounds = state.get("tool_rounds", 0)
 
     if not tool_calls and tool_rounds == 0:
+        # Check user's live salary from DB
+        from app.database import database
+        with database.get_db() as conn:
+            row = conn.execute("SELECT annual_income FROM user_profile LIMIT 1").fetchone()
+            live_sal = int(row['annual_income']) if row and row['annual_income'] else 2400000
+
         # Check for side income query intent
         m_side = (
             re.search(r'(?:side|freelance|consulting|gig|extra|additional)\s+income.*?(?:of\s+)?([₹\d\.]+\s*(?:cr|crore|lakh|lakhs|lac|lacs|l|k|thousand|\d+))', q) or
@@ -112,7 +177,7 @@ def generate_with_tools(state: GraphState):
             tool_calls.append({
                 "id": "call_auto_side_tax",
                 "name": "compute_side_income_tax",
-                "arguments": {"side_income": val_str, "base_salary": "24 lakhs"}
+                "arguments": {"side_income": val_str, "base_salary": f"{live_sal}"}
             })
         elif re.search(r'add\s+([₹\d\.]+\s*(?:cr|crore|lakh|lakhs|lac|lacs|l|k|thousand|\d+))\s+(?:to\s+)?(?:my\s+)?(?:networth|net\s*worth|portfolio)', q):
             m_net = re.search(r'add\s+([₹\d\.]+\s*(?:cr|crore|lakh|lakhs|lac|lacs|l|k|thousand|\d+))\s+(?:to\s+)?(?:my\s+)?(?:networth|net\s*worth|portfolio)', q)
