@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from 'react'
-import { Send, ChevronDown, ChevronUp, Sparkles, Trash2, Upload } from 'lucide-react'
+import { Send, Sparkles, Trash2, Upload } from 'lucide-react'
 import { useNavigate } from '../router'
 import VoiceMicButton from '../components/VoiceMicButton'
 import DocumentScanModal from '../components/DocumentScanModal'
+import { ChatCard } from '../components/ChatCard'
 
 interface Msg { 
   role: 'user' | 'ai'; 
@@ -22,76 +23,25 @@ const QUICK = [
 
 const WELCOME: Msg = {
   role: 'ai',
-  text: `Hi! I'm Halo, your AI wealth advisor 👋\n\nI have access to your live portfolio and can help with tax planning, investments, loans, and more. What's on your mind?`,
+  text: `Hi! I'm Halo, your AI wealth advisor 👋\n\nI have access to your live portfolio and can calculate personal taxes, freelance/side income, investments, and loans with 100% on-device precision.\n\nTry asking:\n• **"I got a new side income of 5 lakhs, what is my tax?"**\n• **"What is my current net worth?"**\n• **"Add 15 lakhs to mutual funds"**`,
   clauses: [],
-  suggestions: ['My Net Worth', 'Add 15L Mutual Funds', 'Optimize Section 80C'],
-}
-
-function ClauseTag({ label }: { label: string }) {
-  const [open, setOpen] = useState(false)
-  return (
-    <button
-      onClick={() => setOpen(!open)}
-      className="inline-flex items-center gap-1 text-xs bg-[#2B2644]/10 text-[#2B2644] px-2.5 py-1 rounded-full font-medium hover:bg-[#2B2644]/20 transition-colors"
-    >
-      {label}
-      {open ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-    </button>
-  )
+  suggestions: ['Calculate tax on 5L side income', 'What is my current net worth?', 'Add 15L Mutual Funds', 'Optimize Section 80C'],
 }
 
 function AiCard({ msg, onSuggest }: { msg: Msg; onSuggest: (s: string) => void }) {
-  const navigate = useNavigate()
   return (
     <div className="flex gap-3">
-      <div className="w-8 h-8 rounded-full bg-[#2B2644] flex items-center justify-center shrink-0 mt-0.5">
+      <div className="w-8 h-8 rounded-full bg-[#2B2644] flex items-center justify-center shrink-0 mt-0.5 text-white text-xs font-bold shadow-xs">
         <Sparkles className="w-4 h-4 text-white" />
       </div>
-      <div className="flex-1 max-w-2xl">
-        <div className="bg-white rounded-2xl rounded-tl-sm px-5 py-4 shadow-sm border border-gray-100">
-          <div className="prose prose-sm max-w-none text-black/80 text-sm leading-relaxed">
-            {msg.text.split('\n').map((line, i) => {
-              if (line.startsWith('**') && line.endsWith('**'))
-                return <p key={i} className="font-semibold text-black mb-1">{line.replace(/\*\*/g, '')}</p>
-              if (line.startsWith('• ') || line.startsWith('- ') || line.startsWith('* '))
-                return <p key={i} className="pl-3 mb-0.5 text-black/70">• {line.slice(2).replace(/\*\*/g, '')}</p>
-              if (line.startsWith('|')) return null
-              if (line.trim() === '') return <br key={i} />
-              return <p key={i} className="mb-1 text-black/70">{line.replace(/\*\*/g, '')}</p>
-            })}
-          </div>
-
-          {msg.wealth_action && (
-            <div className="mt-4 p-3 bg-emerald-50 border border-emerald-200/60 rounded-xl flex items-center justify-between">
-              <span className="text-xs font-medium text-emerald-800 flex items-center gap-1.5">
-                ⚡ Portfolio Updated live in database!
-              </span>
-              <button
-                onClick={() => navigate('/wealth-engine')}
-                className="text-xs font-semibold text-emerald-700 bg-white border border-emerald-200 px-3 py-1.5 rounded-lg hover:bg-emerald-100 transition-colors"
-              >
-                View in Wealth Engine ➔
-              </button>
-            </div>
-          )}
-          {msg.clauses && msg.clauses.length > 0 && (
-            <div className="mt-3 pt-3 border-t border-gray-100">
-              <p className="text-xs text-black/40 mb-2">References</p>
-              <div className="flex flex-wrap gap-2">{msg.clauses.map(c => <ClauseTag key={c} label={c} />)}</div>
-            </div>
-          )}
-        </div>
-        {msg.suggestions && msg.suggestions.length > 0 && (
-          <div className="flex flex-wrap gap-2 mt-2">
-            {msg.suggestions.map(s => (
-              <button key={s} onClick={() => onSuggest(s)}
-                className="text-xs bg-black/5 hover:bg-black/10 text-black/70 px-3 py-1.5 rounded-full transition-colors">
-                {s}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
+      <ChatCard
+        text={msg.text}
+        wealthAction={msg.wealth_action}
+        suggestions={msg.suggestions}
+        clauses={msg.clauses}
+        onSuggest={onSuggest}
+        onQuickAction={onSuggest}
+      />
     </div>
   )
 }
@@ -203,11 +153,25 @@ export default function TaxPlanning() {
 
       const toolsExecuted: string[] = data.executed_tools || []
       const isWealthAction = toolsExecuted.some((t: string) => 
-        ['add_asset', 'add_liability', 'delete_asset', 'delete_liability'].includes(t)
+        ['add_asset', 'add_liability', 'delete_asset', 'delete_liability', 'update_asset', 'update_liability'].includes(t)
       )
 
       if (isWealthAction) {
         window.dispatchEvent(new CustomEvent('halo:wealth_updated'))
+      }
+
+      let dynamicSuggestions: string[] | undefined = undefined
+      if (isWealthAction) {
+        dynamicSuggestions = ['What is my updated net worth?', 'Show real-time money flow', 'Audit my tax liability']
+      } else if (toolsExecuted.includes('compute_side_income_tax')) {
+        dynamicSuggestions = [
+          'How much do I save under Section 44ADA?',
+          'What if side income is ₹10 Lakhs?',
+          'Simulate this in What-If Cockpit',
+          'Add in-hand cash to liquid savings',
+        ]
+      } else if (toolsExecuted.includes('compute_indian_tax')) {
+        dynamicSuggestions = ['Compare Old vs New Regime', 'How can I legally save tax?', 'Simulate salary increment']
       }
 
       setMsgs(m => [...m, {
@@ -215,6 +179,7 @@ export default function TaxPlanning() {
         text: data.answer || "Sorry, I couldn't generate a response.",
         clauses: unique,
         wealth_action: isWealthAction,
+        suggestions: dynamicSuggestions,
       }])
     } catch {
       setMsgs(m => [...m, {

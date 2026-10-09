@@ -10,36 +10,45 @@ class GetPortfolioSummaryParams(BaseModel):
 
 class AddAssetParams(BaseModel):
     type: Optional[str] = "Cash"
-    label: str
-    value: str
-    yield_pct: float = 0.0
+    label: Optional[str] = "Asset"
+    value: Optional[Any] = "0"
+    amount: Optional[Any] = None
+    yield_pct: Optional[float] = 0.0
 
-    @field_validator('value')
+    @field_validator('value', 'amount')
     def validate_value(cls, v):
+        if v is None:
+            return v
         parsed = parse_indian_currency(v)
         if parsed < 0:
             raise ValueError("Asset value cannot be negative.")
         if parsed > 10_000_000_000:
             raise ValueError("Asset value cannot exceed 1000 Cr.")
-        return v
+        return str(v)
 
 class AddLiabilityParams(BaseModel):
     type: Optional[str] = "Loan"
-    label: str
-    value: str
-    interest_rate: float = 0.0
-    emi: str = "0"
+    label: Optional[str] = "Loan"
+    remaining: Optional[Any] = "0"
+    value: Optional[Any] = None
+    amount: Optional[Any] = None
+    rate: Optional[float] = 0.0
+    interest_rate: Optional[float] = 0.0
+    emi: Optional[Any] = "0"
+    tenure: Optional[int] = 0
 
-    @field_validator('value', 'emi')
+    @field_validator('remaining', 'value', 'amount', 'emi')
     def validate_value(cls, v):
+        if v is None:
+            return v
         parsed = parse_indian_currency(v)
         if parsed < 0:
             raise ValueError("Value cannot be negative.")
-        return v
+        return str(v)
 
-    @field_validator('interest_rate')
+    @field_validator('rate', 'interest_rate')
     def validate_rate(cls, v):
-        if not (0 <= v <= 50):
+        if v is not None and not (0 <= v <= 50):
             raise ValueError("Interest rate must be between 0% and 50%.")
         return v
 
@@ -47,30 +56,53 @@ class DeleteAssetParams(BaseModel):
     asset_id: int
 
 class DeleteLiabilityParams(BaseModel):
-    liability_id: int
+    liability_id: Optional[int] = None
+    liab_id: Optional[int] = None
 
 class ComputeIndianTaxParams(BaseModel):
-    income: Any
+    income: Optional[Any] = None
+    gross_salary: Optional[Any] = None
+    other_income: Optional[Any] = None
+    side_income: Optional[Any] = None
+    equity_stcg: Optional[Any] = None
+    equity_ltcg: Optional[Any] = None
+    debt_stcg: Optional[Any] = None
+    home_loan_interest: Optional[Any] = None
     regime: Optional[str] = "new"
-    deductions_80c: Any = "0"
-    deductions_80d: Any = "0"
-    deductions_24b: Any = "0"
+    fy: Optional[str] = "2024-25"
+    deductions_80c: Optional[Any] = "0"
+    deductions_80d: Optional[Any] = "0"
+    deductions_24b: Optional[Any] = "0"
 
-    @field_validator('income', 'deductions_80c', 'deductions_80d', 'deductions_24b')
-    def validate_income(cls, v):
+    @field_validator('regime')
+    def validate_regime(cls, v):
+        v = (str(v) or "new").lower()
+        if "old" in v:
+            return "old"
+        return "new"
+
+class ComputeSideIncomeTaxParams(BaseModel):
+    side_income: Any = "0"
+    base_salary: Optional[Any] = "24 lakhs"
+    income_type: Optional[str] = "freelance"
+    regime: Optional[str] = "new"
+    fy: Optional[str] = "2024-25"
+
+    @field_validator('side_income')
+    def validate_side_income(cls, v):
         parsed = parse_indian_currency(str(v))
         if parsed < 0:
-            raise ValueError("Amount cannot be negative.")
+            raise ValueError("Side income cannot be negative.")
         if parsed > 1_000_000_000:
-            raise ValueError("Amount cannot exceed 100 Cr.")
+            raise ValueError("Side income cannot exceed 100 Cr.")
         return str(v)
 
     @field_validator('regime')
     def validate_regime(cls, v):
         v = (str(v) or "new").lower()
-        if v not in ("new", "old"):
-            raise ValueError("Regime must be 'new' or 'old'.")
-        return v
+        if "old" in v:
+            return "old"
+        return "new"
 
 class CalculateLoanAndEmiParams(BaseModel):
     principal: Any = "0"
@@ -124,5 +156,6 @@ TOOL_MODELS = {
     "update_liability": UpdateLiabilityParams,
     "update_asset": UpdateAssetParams,
     "compute_indian_tax": ComputeIndianTaxParams,
+    "compute_side_income_tax": ComputeSideIncomeTaxParams,
     "calculate_loan_and_emi": CalculateLoanAndEmiParams,
 }

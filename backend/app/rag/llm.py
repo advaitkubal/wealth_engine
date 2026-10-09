@@ -97,7 +97,7 @@ class LLMService:
                 known_tools = {
                     "update_liability", "add_liability", "delete_liability",
                     "update_asset", "add_asset", "delete_asset",
-                    "compute_indian_tax", "calculate_loan_and_emi", "get_portfolio_summary"
+                    "compute_indian_tax", "compute_side_income_tax", "calculate_loan_and_emi", "get_portfolio_summary"
                 }
                 start = content.find("{")
                 end = content.rfind("}")

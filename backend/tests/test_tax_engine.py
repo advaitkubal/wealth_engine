@@ -459,3 +459,42 @@ class TestTaxComplianceSummary:
         assert summary.q1_due == 0
         assert summary.effective_rate_pct == 0.0
 
+
+class TestComputeSideIncomeTax:
+    def test_side_income_with_existing_salary(self):
+        from app.tax_engine import compute_side_income_tax
+        res = compute_side_income_tax(
+            side_income=500000,
+            base_salary=2400000,
+            regime=Regime.NEW,
+            income_type="freelance",
+            fy="2024-25",
+        )
+        assert res.base_salary == 2400000
+        assert res.side_income == 500000
+        assert res.tax_base == 292500
+        assert res.tax_with_side_income == 444600
+        assert res.incremental_tax == 152100
+        assert res.take_home_side_income == 347900
+        assert res.marginal_tax_rate_pct == 30.42
+        # Section 44ADA savings
+        assert res.sec_44ada_eligible is True
+        assert res.sec_44ada_presumptive_income == 250000
+        assert res.sec_44ada_incremental_tax == 74100
+        assert res.sec_44ada_tax_savings == 78000
+        assert res.sec_44ada_take_home == 425900
+
+    def test_side_income_zero_base_salary(self):
+        from app.tax_engine import compute_side_income_tax
+        res = compute_side_income_tax(
+            side_income=500000,
+            base_salary=0,
+            regime=Regime.NEW,
+            income_type="freelance",
+            fy="2024-25",
+        )
+        # Slabs: under 7L, Section 87A rebate applies so tax is 0!
+        assert res.tax_base == 0
+        assert res.incremental_tax == 0
+        assert res.take_home_side_income == 500000
+

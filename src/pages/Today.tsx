@@ -5,6 +5,7 @@ import VoiceMicButton from '../components/VoiceMicButton'
 import DocumentScanModal from '../components/DocumentScanModal'
 import DebtIngestionModal from '../components/DebtIngestionModal'
 import MoneyFlowVisualizer from '../components/MoneyFlowVisualizer'
+import { ChatCard } from '../components/ChatCard'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Upload,
@@ -56,6 +57,7 @@ interface Msg {
   text: string
   wealth_action?: boolean
   suggestions?: string[]
+  clauses?: string[]
 }
 
 const WELCOME: Msg = {
@@ -179,13 +181,31 @@ export default function Today() {
         window.dispatchEvent(new CustomEvent('halo:wealth_updated'))
       }
 
+      const citations = (data.sources ?? []).map((s: any) =>
+        s.page ? `${s.document} (p. ${s.page})` : s.document
+      )
+      const unique = Array.from(new Set(citations)) as string[]
+
+      let dynamicSuggestions: string[] | undefined = undefined
+      if (isWealthAction) {
+        dynamicSuggestions = ['What is my updated net worth?', 'Show real-time money flow', 'Audit my tax liability']
+      } else if (toolsExecuted.includes('compute_side_income_tax')) {
+        dynamicSuggestions = [
+          'How much do I save under Section 44ADA?',
+          'What if side income is ₹10 Lakhs?',
+          'Simulate this in What-If Cockpit',
+          'Add in-hand cash to liquid savings',
+        ]
+      } else if (toolsExecuted.includes('compute_indian_tax')) {
+        dynamicSuggestions = ['Compare Old vs New Regime', 'How can I legally save tax?', 'Simulate salary increment']
+      }
+
       setMsgs(m => [...m, {
         role: 'ai',
         text: data.answer || "I have processed your request.",
         wealth_action: isWealthAction,
-        suggestions: isWealthAction
-          ? ['What is my updated net worth?', 'Show real-time money flow', 'Audit my tax liability']
-          : undefined,
+        suggestions: dynamicSuggestions,
+        clauses: unique,
       }])
     } catch {
       setMsgs(m => [...m, {
@@ -684,44 +704,14 @@ export default function Today() {
                     <div className="w-6 h-6 rounded-full bg-slate-900 flex items-center justify-center text-[10px] text-white shrink-0 mt-0.5">
                       ✨
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="bg-slate-50 border border-slate-100 rounded-2xl rounded-tl-sm px-3.5 py-3 text-xs text-slate-800 leading-relaxed shadow-2xs">
-                        <div className="space-y-1">
-                          {m.text.split('\n').map((line, li) => {
-                            if (line.startsWith('**') && line.endsWith('**'))
-                              return <p key={li} className="font-bold text-slate-900">{line.replace(/\*\*/g, '')}</p>
-                            if (line.startsWith('• ') || line.startsWith('- ') || line.startsWith('* '))
-                              return <p key={li} className="pl-2 text-slate-700">• {line.slice(2).replace(/\*\*/g, '')}</p>
-                            if (line.startsWith('|')) return null
-                            if (line.trim() === '') return <br key={li} />
-                            return <p key={li} className="text-slate-700">{line.replace(/\*\*/g, '')}</p>
-                          })}
-                        </div>
-
-                        {m.wealth_action && (
-                          <div className="mt-2.5 p-2.5 bg-emerald-50 border border-emerald-200/80 rounded-xl flex items-center justify-between">
-                            <span className="text-[11px] font-bold text-emerald-800 flex items-center gap-1.5">
-                              ⚡ Dashboard & Database Updated live!
-                            </span>
-                            <span className="text-[10px] font-semibold text-emerald-600">Saved to SQLite</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {m.suggestions && m.suggestions.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5 mt-2">
-                          {m.suggestions.map((s, si) => (
-                            <button
-                              key={si}
-                              onClick={() => sendMsg(s)}
-                              className="text-[11px] bg-white border border-slate-200 hover:border-indigo-400 hover:text-indigo-600 text-slate-600 px-2.5 py-1 rounded-full transition-colors"
-                            >
-                              {s}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
+                    <ChatCard
+                      text={m.text}
+                      wealthAction={m.wealth_action}
+                      suggestions={m.suggestions}
+                      clauses={m.clauses}
+                      onSuggest={s => sendMsg(s)}
+                      onQuickAction={act => sendMsg(act)}
+                    />
                   </div>
                 )
               ))}

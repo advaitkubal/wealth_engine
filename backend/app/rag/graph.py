@@ -95,6 +95,42 @@ def generate_with_tools(state: GraphState):
     tool_calls = result.get("tool_calls", [])  # list of plain dicts
     raw_msg    = result.get("raw_message")
 
+    # Deterministic intent fallback (Rule 2: AI never guesses math, tools always compute)
+    import re
+    q = state.get("question", "").lower()
+    tool_rounds = state.get("tool_rounds", 0)
+
+    if not tool_calls and tool_rounds == 0:
+        # Check for side income query intent
+        m_side = (
+            re.search(r'(?:side|freelance|consulting|gig|extra|additional)\s+income.*?(?:of\s+)?([₹\d\.]+\s*(?:cr|crore|lakh|lakhs|lac|lacs|l|k|thousand|\d+))', q) or
+            re.search(r'(?:tax|kitna|calculate).*?(?:side|freelance|consulting|gig)\s+income.*?(?:of\s+)?([₹\d\.]+\s*(?:cr|crore|lakh|lakhs|lac|lacs|l|k|thousand|\d+))', q) or
+            re.search(r'(?:new\s+)?side\s+income\s+(?:of\s+)?([₹\d\.]+\s*(?:cr|crore|lakh|lakhs|lac|lacs|l|k|thousand|\d+))', q)
+        )
+        if m_side:
+            val_str = m_side.group(1).strip()
+            tool_calls.append({
+                "id": "call_auto_side_tax",
+                "name": "compute_side_income_tax",
+                "arguments": {"side_income": val_str, "base_salary": "24 lakhs"}
+            })
+        elif re.search(r'add\s+([₹\d\.]+\s*(?:cr|crore|lakh|lakhs|lac|lacs|l|k|thousand|\d+))\s+(?:to\s+)?(?:my\s+)?(?:networth|net\s*worth|portfolio)', q):
+            m_net = re.search(r'add\s+([₹\d\.]+\s*(?:cr|crore|lakh|lakhs|lac|lacs|l|k|thousand|\d+))\s+(?:to\s+)?(?:my\s+)?(?:networth|net\s*worth|portfolio)', q)
+            val_str = m_net.group(1).strip()
+            tool_calls.append({
+                "id": "call_auto_add_asset",
+                "name": "add_asset",
+                "arguments": {"label": "Liquid Savings", "type": "Cash", "value": val_str}
+            })
+        elif re.search(r'(?:calculate|compute|what is)\s+(?:my\s+)?tax\s+(?:on|for)\s+([₹\d\.]+\s*(?:cr|crore|lakh|lakhs|lac|lacs|l|k|thousand|\d+))', q):
+            m_tax = re.search(r'(?:calculate|compute|what is)\s+(?:my\s+)?tax\s+(?:on|for)\s+([₹\d\.]+\s*(?:cr|crore|lakh|lakhs|lac|lacs|l|k|thousand|\d+))', q)
+            val_str = m_tax.group(1).strip()
+            tool_calls.append({
+                "id": "call_auto_tax",
+                "name": "compute_indian_tax",
+                "arguments": {"gross_salary": val_str}
+            })
+
     # Convert the raw SDK message to a plain dict so LangGraph can store it
     if raw_msg is not None:
         try:
@@ -188,6 +224,8 @@ def execute_tools_node(state: GraphState):
         content_to_pass = tool_result
         if tool_result.startswith("ERROR"):
             content_to_pass = f"[CRITICAL TOOL ERROR: {tool_result}\nThe database was NOT updated. You must honestly inform the user that the action failed and explain what is missing. DO NOT claim that it succeeded.]"
+        elif tc["name"] == "compute_side_income_tax":
+            content_to_pass += "\n\n[INSTRUCTION: Present the exact final calculated figures to the user clearly: State the Net In-Hand money (Take-Home), the Incremental Tax payable, the marginal tax rate, and the Section 44ADA tax savings if applicable. Do NOT merely recite raw tax slabs—give the calculated end results directly.]"
         elif tc["name"] == "compute_indian_tax":
             content_to_pass += "\n\n[INSTRUCTION: Present this full breakdown, slice-by-slice calculation, deductions, and total tax payable to the user in a clear table or structured list.]"
         elif tc["name"] == "calculate_loan_and_emi":

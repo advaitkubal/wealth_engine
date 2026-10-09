@@ -7,6 +7,7 @@ compute Indian tax liabilities, and analyze loan EMIs & interest rates.
 """
 
 import datetime
+import json
 import logging
 import re
 
@@ -15,6 +16,7 @@ from app.tax_engine import (
     Regime,
     compute_capital_gains_tax,
     compute_income_tax,
+    compute_side_income_tax,
     fmt_inr,
 )
 
@@ -253,6 +255,43 @@ TOOLS = [
                     }
                 },
                 "required": []
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "compute_side_income_tax",
+            "description": (
+                "Accurately calculate tax on new side income, freelance earnings, consulting fees, "
+                "moonlighting, bonus, raise, or extra business revenue. "
+                "Computes the exact incremental tax, in-hand take-home money, marginal tax rate, "
+                "and Section 44ADA presumptive tax savings (50% expense deduction). "
+                "ALWAYS call this tool whenever the user mentions new side income, freelance income, "
+                "consulting, extra earnings, or asks how much tax they will pay on additional money."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "side_income": {
+                        "type": "string",
+                        "description": "Additional / side income amount. Pass string directly with unit, e.g. '5 lakhs', '50000', '3L', '2.5 lakhs'."
+                    },
+                    "base_salary": {
+                        "type": "string",
+                        "description": "User's current base salary (defaults to ₹24 Lakhs profile salary if not specified), e.g. '24 lakhs', '18L', or '0'."
+                    },
+                    "income_type": {
+                        "type": "string",
+                        "description": "Type of income: 'freelance', 'consulting', 'gig', 'bonus', 'rental', 'business'. Defaults to 'freelance'."
+                    },
+                    "regime": {
+                        "type": "string",
+                        "enum": ["new", "old"],
+                        "description": "Tax regime. Defaults to 'new'."
+                    }
+                },
+                "required": ["side_income"]
             },
         },
     },
@@ -541,8 +580,16 @@ def execute_tool(name: str, args: dict) -> str:
             regime_enum = Regime.OLD if "old" in regime_str else Regime.NEW
             fy = args.get("fy") or "2024-25"
 
-            gross_sal = int(round(parse_indian_currency(args.get("gross_salary", 0))))
-            other_inc = int(round(parse_indian_currency(args.get("other_income", 0))))
+            raw_gross = args.get("gross_salary") or args.get("salary") or args.get("income") or 0
+            raw_other = args.get("other_income") or args.get("side_income") or 0
+            gross_sal = int(round(parse_indian_currency(raw_gross)))
+            other_inc = int(round(parse_indian_currency(raw_other)))
+
+            # If user only passed other_income/side_income and gross_salary is 0, keep it as other_income
+            # Or if user passed a single general amount as income
+            if gross_sal == 0 and other_inc > 0 and not args.get("gross_salary"):
+                pass  # pure other income
+
             equity_stcg = int(round(parse_indian_currency(args.get("equity_stcg", 0))))
             equity_ltcg = int(round(parse_indian_currency(args.get("equity_ltcg", 0))))
             debt_stcg = int(round(parse_indian_currency(args.get("debt_stcg", 0))))
@@ -614,6 +661,75 @@ def execute_tool(name: str, args: dict) -> str:
             report.append(f"Effective Tax Rate: {breakdown.effective_rate_pct:.2f}%")
             if breakdown.explanation.unverified_values:
                 report.append(f"NOTE: Contains unverified provisions: {', '.join(breakdown.explanation.unverified_values)}")
+
+            report.append("\n<!-- METRICS: " + json.dumps({
+                "type": "tax_computation",
+                "gross_income": gross_sal + other_inc,
+                "net_taxable": breakdown.net_taxable_income,
+                "total_tax": final_total_tax,
+                "effective_rate": breakdown.effective_rate_pct,
+                "regime": regime_enum.value,
+            }) + " -->")
+
+            return "\n".join(report)
+
+        elif name == "compute_side_income_tax":
+            side_inc = int(round(parse_indian_currency(args.get("side_income", 0))))
+            base_sal_val = args.get("base_salary")
+            if base_sal_val is None or str(base_sal_val).strip() == "":
+                base_sal = 2400000  # standard profile salary
+            else:
+                base_sal = int(round(parse_indian_currency(base_sal_val)))
+
+            regime_str = str(args.get("regime", "new")).lower()
+            regime_enum = Regime.OLD if "old" in regime_str else Regime.NEW
+            inc_type = str(args.get("income_type", "freelance")).strip()
+            fy = args.get("fy") or "2024-25"
+
+            res = compute_side_income_tax(
+                side_income=side_inc,
+                base_salary=base_sal,
+                regime=regime_enum,
+                income_type=inc_type,
+                fy=fy,
+            )
+
+            report = [
+                f"=== DYNAMIC TAX COMPUTATION ON SIDE INCOME (FY {fy} | {regime_enum.value.upper()} REGIME) ===",
+                f"• Additional Side Income: {fmt_inr(res.side_income)} ({res.income_type.title()})",
+                f"• Base Salary Baseline: {fmt_inr(res.base_salary)}",
+                f"• Combined Gross Income: {fmt_inr(res.base_salary + res.side_income)}",
+                "",
+                "CALCULATED END RESULT (STANDARD SLAB TAXATION):",
+                f"• Baseline Tax on Salary: {fmt_inr(res.tax_base)}",
+                f"• New Total Tax with Side Income: {fmt_inr(res.tax_with_side_income)}",
+                f"• INCREMENTAL TAX ON SIDE INCOME: {fmt_inr(res.incremental_tax)}",
+                f"• NET TAKE-HOME CASH IN-HAND: {fmt_inr(res.take_home_side_income)}",
+                f"• Marginal Tax Rate on Side Income: {res.marginal_tax_rate_pct:.2f}%",
+                f"• Effective Combined Tax Rate: {res.effective_overall_rate_pct:.2f}%",
+            ]
+
+            if res.sec_44ada_eligible:
+                report.extend([
+                    "",
+                    "🌟 SECTION 44ADA PRESUMPTIVE TAXATION ADVANTAGE (FOR FREELANCERS & CONSULTANTS):",
+                    f"• Presumptive Deemed Profit (50%): {fmt_inr(res.sec_44ada_presumptive_income)} (50% expense deduction without needing bills)",
+                    f"• Reduced Incremental Tax: {fmt_inr(res.sec_44ada_incremental_tax)}",
+                    f"• MAXIMIZED TAKE-HOME CASH: {fmt_inr(res.sec_44ada_take_home)}",
+                    f"• TOTAL TAX SAVED VIA 44ADA: {fmt_inr(res.sec_44ada_tax_savings)}! 💰",
+                ])
+
+            report.append("\n<!-- METRICS: " + json.dumps({
+                "type": "side_income_computation",
+                "side_income": res.side_income,
+                "base_salary": res.base_salary,
+                "incremental_tax": res.incremental_tax,
+                "take_home": res.take_home_side_income,
+                "marginal_rate": res.marginal_tax_rate_pct,
+                "sec_44ada_savings": res.sec_44ada_tax_savings if res.sec_44ada_eligible else 0,
+                "sec_44ada_take_home": res.sec_44ada_take_home if res.sec_44ada_eligible else 0,
+                "income_type": res.income_type,
+            }) + " -->")
 
             return "\n".join(report)
 

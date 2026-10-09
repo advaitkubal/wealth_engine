@@ -77,6 +77,27 @@ class CapGainsTaxResult(BaseModel):
     explanation: TaxExplanation
 
 
+class SideIncomeResult(BaseModel):
+    fy: str
+    regime: Regime
+    base_salary: int
+    side_income: int
+    income_type: str
+    tax_base: int
+    tax_with_side_income: int
+    incremental_tax: int
+    take_home_side_income: int
+    marginal_tax_rate_pct: float
+    effective_overall_rate_pct: float
+    sec_44ada_eligible: bool
+    sec_44ada_presumptive_income: int
+    sec_44ada_tax: int
+    sec_44ada_incremental_tax: int
+    sec_44ada_take_home: int
+    sec_44ada_tax_savings: int
+    explanation: TaxExplanation
+
+
 
 class OldRegimeInputs(BaseModel):
     basic_salary: int = 0
@@ -760,4 +781,110 @@ def compute_section_234_interest(estimated_total_tax: int, tds_deducted: int, ad
         "breakdown_234C": c_breakdown,
         "explanation": f"234B Interest: {fmt_inr(interest_234b)}, 234C Interest: {fmt_inr(interest_234c)}",
     }
+
+
+def compute_side_income_tax(
+    side_income: int,
+    base_salary: int = 2400000,
+    regime: Regime = Regime.NEW,
+    income_type: str = "freelance",
+    fy: str | None = None,
+) -> SideIncomeResult:
+    """
+    Computes exact incremental tax, in-hand cash, marginal rate,
+    and Section 44ADA presumptive tax savings for new side or freelance income.
+    """
+    if fy is None:
+        fy = current_fy()
+
+    base_salary = max(0, int(base_salary))
+    side_income = max(0, int(side_income))
+
+    # 1. Base Tax on existing salary
+    base_res = compute_income_tax(gross_salary=base_salary, regime=regime, fy=fy)
+    tax_base = base_res.total_tax
+
+    # 2. Combined Tax with Side Income under regular slabs
+    with_side_res = compute_income_tax(
+        gross_salary=base_salary,
+        other_income=side_income,
+        regime=regime,
+        fy=fy,
+    )
+    tax_with_side = with_side_res.total_tax
+    incremental_tax = max(0, tax_with_side - tax_base)
+    take_home = max(0, side_income - incremental_tax)
+    marginal_rate = round((incremental_tax / side_income * 100), 2) if side_income > 0 else 0.0
+    effective_rate = with_side_res.effective_rate_pct
+
+    # 3. Section 44ADA Presumptive Taxation (freelancers, consultants, professionals up to ₹75L)
+    type_lower = income_type.lower()
+    is_freelance = any(k in type_lower for k in ["freelance", "consulting", "professional", "gig", "contract", "side", "tech", "coding", "agency"])
+    sec_44ada_eligible = is_freelance and side_income <= 7500000
+
+    presumptive_income = int(round(side_income * 0.50)) if sec_44ada_eligible else side_income
+    with_44ada_res = compute_income_tax(
+        gross_salary=base_salary,
+        other_income=presumptive_income,
+        regime=regime,
+        fy=fy,
+    )
+    sec_44ada_tax = with_44ada_res.total_tax
+    sec_44ada_incremental_tax = max(0, sec_44ada_tax - tax_base)
+    sec_44ada_take_home = max(0, side_income - sec_44ada_incremental_tax)
+    sec_44ada_savings = max(0, incremental_tax - sec_44ada_incremental_tax)
+
+    steps = [
+        f"1. Base salary: {fmt_inr(base_salary)} (Base Tax: {fmt_inr(tax_base)})",
+        f"2. Side income: {fmt_inr(side_income)} added under progressive slabs",
+        f"3. Combined total income: {fmt_inr(base_salary + side_income)} (Total Tax: {fmt_inr(tax_with_side)})",
+        f"4. Incremental tax on side income: {fmt_inr(tax_with_side)} − {fmt_inr(tax_base)} = {fmt_inr(incremental_tax)} ({marginal_rate}% marginal rate)",
+        f"5. Net take-home cash in-hand: {fmt_inr(side_income)} − {fmt_inr(incremental_tax)} = {fmt_inr(take_home)}",
+    ]
+    if sec_44ada_eligible:
+        steps.append(
+            f"6. Section 44ADA Presumptive Scheme: 50% ({fmt_inr(presumptive_income)}) deemed expense deduction. "
+            f"Tax reduced to {fmt_inr(sec_44ada_incremental_tax)}, saving {fmt_inr(sec_44ada_savings)} in tax!"
+        )
+
+    explanation = TaxExplanation(
+        formula="Incremental Tax = Tax(Salary + Side Income) − Tax(Salary); In-Hand = Side Income − Incremental Tax",
+        inputs={
+            "base_salary": base_salary,
+            "side_income": side_income,
+            "regime": regime.value,
+            "income_type": income_type,
+            "fy": fy,
+        },
+        steps=steps,
+        section_references=[
+            "Section 115BAC" if regime == Regime.NEW else "Section 80C/80D",
+            "Section 44ADA" if sec_44ada_eligible else "Section 56 (Income from Other Sources)"
+        ],
+        confidence=Confidence.EXACT,
+        assumptions=[
+            f"Assuming standard base salary of {fmt_inr(base_salary)}" if base_salary > 0 else "Assuming zero prior base salary"
+        ],
+    )
+
+    return SideIncomeResult(
+        fy=fy,
+        regime=regime,
+        base_salary=base_salary,
+        side_income=side_income,
+        income_type=income_type,
+        tax_base=tax_base,
+        tax_with_side_income=tax_with_side,
+        incremental_tax=incremental_tax,
+        take_home_side_income=take_home,
+        marginal_tax_rate_pct=marginal_rate,
+        effective_overall_rate_pct=effective_rate,
+        sec_44ada_eligible=sec_44ada_eligible,
+        sec_44ada_presumptive_income=presumptive_income,
+        sec_44ada_tax=sec_44ada_tax,
+        sec_44ada_incremental_tax=sec_44ada_incremental_tax,
+        sec_44ada_take_home=sec_44ada_take_home,
+        sec_44ada_tax_savings=sec_44ada_savings,
+        explanation=explanation,
+    )
 
