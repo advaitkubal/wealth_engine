@@ -12,9 +12,6 @@ interface Msg {
   wealth_action?: boolean;
 }
 
-const STORAGE_KEY_MSGS = 'halo_chat_msgs'
-const STORAGE_KEY_CONV = 'halo_chat_conv_id'
-
 const QUICK = [
   { label: 'My Net Worth',                    q: 'What is my current net worth?' },
   { label: 'Add 15L Mutual Funds',            q: 'Add 15 lakhs to my Mutual Funds asset' },
@@ -28,14 +25,6 @@ const WELCOME: Msg = {
   text: `Hi! I'm Halo, your AI wealth advisor 👋\n\nI have access to your live portfolio and can help with tax planning, investments, loans, and more. What's on your mind?`,
   clauses: [],
   suggestions: ['My Net Worth', 'Add 15L Mutual Funds', 'Optimize Section 80C'],
-}
-
-function loadMsgs(): Msg[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY_MSGS)
-    if (raw) return JSON.parse(raw)
-  } catch {}
-  return [WELCOME]
 }
 
 function ClauseTag({ label }: { label: string }) {
@@ -108,24 +97,13 @@ function AiCard({ msg, onSuggest }: { msg: Msg; onSuggest: (s: string) => void }
 }
 
 export default function TaxPlanning() {
-  const [msgs, setMsgs]       = useState<Msg[]>(loadMsgs)
-  const [convId, setConvId]   = useState<string | undefined>(
-    () => localStorage.getItem(STORAGE_KEY_CONV) || undefined
-  )
+  const [msgs, setMsgs]       = useState<Msg[]>([WELCOME])
+  const [convId, setConvId]   = useState<string | undefined>(undefined)
   const [input, setInput]     = useState('')
   const [thinking, setThinking] = useState(false)
   const [isScanOpen, setIsScanOpen] = useState(false)
   const bottomRef             = useRef<HTMLDivElement>(null)
   const navigate              = useNavigate()
-
-  // Persist to localStorage on every change
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_MSGS, JSON.stringify(msgs))
-  }, [msgs])
-
-  useEffect(() => {
-    if (convId) localStorage.setItem(STORAGE_KEY_CONV, convId)
-  }, [convId])
 
   const chatContainerRef = useRef<HTMLDivElement>(null)
 
@@ -136,10 +114,9 @@ export default function TaxPlanning() {
   }, [msgs, thinking])
 
   const clearChat = () => {
-    localStorage.removeItem(STORAGE_KEY_MSGS)
-    localStorage.removeItem(STORAGE_KEY_CONV)
     setMsgs([WELCOME])
     setConvId(undefined)
+    setInput('')
   }
 
   useEffect(() => {

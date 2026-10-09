@@ -58,21 +58,10 @@ interface Msg {
   suggestions?: string[]
 }
 
-const STORAGE_KEY_MSGS = 'halo_chat_msgs'
-const STORAGE_KEY_CONV = 'halo_chat_conv_id'
-
 const WELCOME: Msg = {
   role: 'ai',
-  text: `Hi Advait! I'm Halo, your on-device AI wealth assistant 👋\n\nI have direct access to your live portfolio database. Ask me anything or command portfolio changes directly:\n\n• **"Change homeloan to 40 lakhs"**\n• **"Add 15L mutual funds"**\n• **"Prepay 5L from car loan"**\n• **"What is my tax liability under New Regime?"**`,
+  text: `Hi Advait! I'm Halo, your on-device AI wealth assistant 👋\n\nI have direct access to your live portfolio. Ask me anything or command portfolio changes directly:\n\n• **"Change homeloan to 40 lakhs"**\n• **"Add 15L mutual funds"**\n• **"Prepay 5L from car loan"**\n• **"What is my tax liability under New Regime?"**`,
   suggestions: ['Change homeloan to 40 lakhs', 'What is my current net worth?', 'Add 15L Mutual Funds', 'Optimize Section 80C'],
-}
-
-function loadMsgs(): Msg[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY_MSGS)
-    if (raw) return JSON.parse(raw)
-  } catch {}
-  return [WELCOME]
 }
 
 export default function Today() {
@@ -88,25 +77,15 @@ export default function Today() {
   // Interactive Future-Self Time Machine Age State
   const [age, setAge] = useState<number>(30)
 
-  // Side Chat Copilot State
-  const [msgs, setMsgs] = useState<Msg[]>(loadMsgs)
-  const [convId, setConvId] = useState<string | undefined>(
-    () => localStorage.getItem(STORAGE_KEY_CONV) || undefined
-  )
+  // Side Chat Copilot State (Always starts fresh on each visit)
+  const [msgs, setMsgs] = useState<Msg[]>([WELCOME])
+  const [convId, setConvId] = useState<string | undefined>(undefined)
   const [thinking, setThinking] = useState(false)
   const [isChatOpen, setIsChatOpen] = useState(false)
   const [sideInput, setSideInput] = useState('')
   const chatBottomRef = useRef<HTMLDivElement>(null)
 
   const navigate = useNavigate()
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_MSGS, JSON.stringify(msgs))
-  }, [msgs])
-
-  useEffect(() => {
-    if (convId) localStorage.setItem(STORAGE_KEY_CONV, convId)
-  }, [convId])
 
   const chatContainerRef = useRef<HTMLDivElement>(null)
 
@@ -147,10 +126,9 @@ export default function Today() {
   }, [selectedFy])
 
   const clearChat = () => {
-    localStorage.removeItem(STORAGE_KEY_MSGS)
-    localStorage.removeItem(STORAGE_KEY_CONV)
     setMsgs([WELCOME])
     setConvId(undefined)
+    setSideInput('')
   }
 
   const sendMsg = async (text: string) => {
