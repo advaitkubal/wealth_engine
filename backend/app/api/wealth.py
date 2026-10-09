@@ -190,15 +190,25 @@ def portfolio_summary():
         _seed_defaults(conn)
         assets = [dict(r) for r in conn.execute("SELECT * FROM assets ORDER BY id").fetchall()]
         liabs  = [dict(r) for r in conn.execute("SELECT * FROM liabilities ORDER BY id").fetchall()]
+        prof   = conn.execute("SELECT annual_income, monthly_inhand, monthly_expenses FROM user_profile LIMIT 1").fetchone()
 
     total_assets = sum(a["value"] for a in assets)
     total_liabs  = sum(liab["remaining"] for liab in liabs)
+    total_monthly_emi = sum(liab.get("emi", 0) for liab in liabs)
     net_worth    = total_assets - total_liabs
+
+    annual_income = prof[0] if prof else 2400000
+    monthly_inhand = prof[1] if prof else 160000
+    monthly_expenses = prof[2] if prof else 55000
 
     return {
         "net_worth": net_worth,
         "total_assets": total_assets,
         "total_liabilities": total_liabs,
+        "total_monthly_emi": total_monthly_emi,
+        "annual_income": annual_income,
+        "monthly_inhand": monthly_inhand,
+        "monthly_expenses": monthly_expenses,
         "assets": assets,
         "liabilities": liabs,
     }

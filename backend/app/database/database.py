@@ -49,6 +49,7 @@ def init_db():
             conn.execute(schema.CREATE_MESSAGES_TABLE)
             conn.execute(schema.CREATE_ASSETS_TABLE)
             conn.execute(schema.CREATE_LIABILITIES_TABLE)
+            conn.execute(schema.CREATE_USER_PROFILE_TABLE)
             conn.execute(schema.INDEX_DOCUMENTS)
             conn.execute(schema.INDEX_MESSAGES)
 

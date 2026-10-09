@@ -76,3 +76,13 @@ CREATE TABLE IF NOT EXISTS liabilities (
     updated_at TEXT
 );
 '''
+
+CREATE_USER_PROFILE_TABLE = '''
+CREATE TABLE IF NOT EXISTS user_profile (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    annual_income REAL NOT NULL DEFAULT 2400000,
+    monthly_inhand REAL NOT NULL DEFAULT 160000,
+    monthly_expenses REAL NOT NULL DEFAULT 55000,
+    updated_at TEXT
+);
+'''

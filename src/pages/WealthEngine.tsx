@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Plus, Trash2, TrendingUp, AlertCircle, X, RefreshCw } from 'lucide-react'
+import { Plus, Trash2, TrendingUp, AlertCircle, X, RefreshCw, Upload } from 'lucide-react'
 import DonutChart from '../components/DonutChart'
 import BarChart from '../components/BarChart'
+import DocumentScanModal from '../components/DocumentScanModal'
 
 const API = 'http://localhost:8000/api/wealth'
 
@@ -38,6 +39,7 @@ export default function WealthEngine() {
   const [loading, setLoading] = useState(true)
   const [saving,  setSaving]  = useState(false)
   const [modal,   setModal]   = useState<ModalMode>(null)
+  const [isScanOpen, setIsScanOpen] = useState(false)
 
   const [form, setForm] = useState({
     type: ASSET_TYPES[0], label: '', value: '', yield_pct: '',
@@ -135,13 +137,24 @@ export default function WealthEngine() {
   return (
     <div className="min-h-screen bg-[#F5F5F5] flex flex-col">
       <div className="max-w-[88rem] mx-auto w-full px-6 py-10">
-        <div className="flex items-center justify-between mb-2">
-          <h1 className="text-4xl md:text-5xl font-medium text-black" style={{ letterSpacing: '-0.03em' }}>Wealth Engine</h1>
-          <button onClick={fetchData} className="inline-flex items-center gap-2 text-sm text-black/50 hover:text-black transition-colors">
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
-          </button>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
+          <div>
+            <h1 className="text-4xl md:text-5xl font-medium text-black" style={{ letterSpacing: '-0.03em' }}>Wealth Engine</h1>
+            <p className="text-black/50 text-base mt-1" style={{ fontFamily: "'Inter', sans-serif" }}>Your live private financial dashboard</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setIsScanOpen(true)}
+              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-md shadow-indigo-100 flex items-center gap-2 transition-all hover:scale-105"
+            >
+              <Upload className="w-4 h-4" />
+              <span>+ Add Data (Upload PDF)</span>
+            </button>
+            <button onClick={fetchData} className="inline-flex items-center gap-2 text-sm text-black/50 hover:text-black transition-colors px-3 py-2 bg-white rounded-xl border border-gray-200">
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
+            </button>
+          </div>
         </div>
-        <p className="text-black/50 text-base mb-8" style={{ fontFamily: "'Inter', sans-serif" }}>Your live private financial dashboard</p>
 
         {loading ? (
           <div className="flex items-center justify-center h-48 text-black/30 text-sm">Loading your portfolio…</div>
@@ -298,6 +311,16 @@ export default function WealthEngine() {
           </div>
         </div>
       )}
+
+      {/* Document Ingestion Modal */}
+      <DocumentScanModal
+        isOpen={isScanOpen}
+        onClose={() => setIsScanOpen(false)}
+        onSuccess={() => {
+          setIsScanOpen(false)
+          fetchData()
+        }}
+      />
     </div>
   )
 }

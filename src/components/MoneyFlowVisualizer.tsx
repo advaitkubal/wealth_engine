@@ -1,12 +1,39 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Sparkles } from 'lucide-react'
 
 export default function MoneyFlowVisualizer() {
-  const [grossIncome, setGrossIncome] = useState<number>(250000) // ₹2.5L / month
-  const [taxPct, setTaxPct] = useState<number>(14) // ~₹35,000 TDS
-  const [homeLoanEmi, setHomeLoanEmi] = useState<number>(56400)
-  const [carLoanEmi, setCarLoanEmi] = useState<number>(18500)
+  const [grossIncome, setGrossIncome] = useState<number>(300000) // ₹3L / month
+  const [taxPct, setTaxPct] = useState<number>(14) // ~₹42,000 TDS
+  const [homeLoanEmi, setHomeLoanEmi] = useState<number>(36500)
+  const [carLoanEmi, setCarLoanEmi] = useState<number>(15200)
   const [livingExpenses, setLivingExpenses] = useState<number>(55000)
+
+  const fetchLiveSummary = () => {
+    fetch('http://localhost:8000/api/wealth/summary')
+      .then(r => r.json())
+      .then(d => {
+        if (d.annual_income) {
+          setGrossIncome(Math.round(d.annual_income / 12))
+        }
+        if (d.liabilities && Array.isArray(d.liabilities)) {
+          const hl = d.liabilities.find((l: any) => l.type === 'Home Loan' || l.label.toLowerCase().includes('home') || l.label.toLowerCase().includes('housing'))
+          const cl = d.liabilities.find((l: any) => l.type === 'Car Loan' || l.label.toLowerCase().includes('car') || l.label.toLowerCase().includes('auto'))
+          if (hl) setHomeLoanEmi(hl.emi || 36500)
+          if (cl) setCarLoanEmi(cl.emi || 15200)
+        }
+        if (d.monthly_expenses) {
+          setLivingExpenses(d.monthly_expenses)
+        }
+      })
+      .catch(() => {})
+  }
+
+  useEffect(() => {
+    fetchLiveSummary()
+    const handleUpdate = () => fetchLiveSummary()
+    window.addEventListener('halo:wealth_updated', handleUpdate)
+    return () => window.removeEventListener('halo:wealth_updated', handleUpdate)
+  }, [])
 
   // Derived flows
   const monthlyTax = Math.round(grossIncome * (taxPct / 100))

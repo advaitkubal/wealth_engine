@@ -263,19 +263,21 @@ export default function Today() {
 
         <div className="flex flex-wrap items-center gap-3">
           <button
+            onClick={() => setIsScanOpen(true)}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-full px-5 py-2.5 text-xs font-bold flex items-center gap-2 transition-all shadow-md shadow-indigo-100 hover:scale-105"
+            title="Upload Bank Statement, CAS, or Loan Schedule PDF to auto-update entire dashboard"
+          >
+            <Upload className="w-4 h-4" />
+            <span>+ Add Data (Upload PDF)</span>
+          </button>
+
+          <button
             onClick={() => setIsDebtModalOpen(true)}
             className="bg-emerald-50 text-emerald-700 border border-emerald-200/80 hover:bg-emerald-100 rounded-full px-4 py-2 text-xs font-semibold flex items-center gap-2 transition-colors shadow-sm"
             title="Auto-sync loans from CIBIL/Experian & Account Aggregator without manual typing"
           >
             <CreditCard className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Link Loans (CIBIL / AA Sync)</span>
-          </button>
-
-          <button
-            onClick={() => setIsScanOpen(true)}
-            className="bg-indigo-50 text-indigo-600 border border-indigo-100 hover:bg-indigo-100 rounded-full px-4 py-2 text-xs font-semibold flex items-center gap-2 transition-colors shadow-sm"
-          >
-            <Upload className="w-3.5 h-3.5" /> Scan CAS / Form 16
+            <span>Link Loans (CIBIL / AA)</span>
           </button>
 
           <div className="bg-white border border-slate-100 rounded-full px-4 py-2 shadow-sm flex items-center gap-2">
@@ -305,9 +307,24 @@ export default function Today() {
                 <h2 className="text-4xl font-extrabold text-slate-900 mt-1">
                   {summary ? fmtCr(summary.net_worth) : '₹3.41Cr'}
                 </h2>
-                <p className="text-xs text-emerald-600 font-semibold mt-1">
-                  Total Assets: {summary ? fmtCr(summary.total_assets) : '₹4.14Cr'} | Active Debt: {summary ? fmtCr(summary.total_liabilities) : '₹73.2L'}
-                </p>
+                <div className="flex flex-wrap items-center gap-2 mt-2">
+                  <span className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2.5 py-1 rounded-lg font-semibold">
+                    Total Assets: {summary ? fmtCr(summary.total_assets) : '₹4.14Cr'}
+                  </span>
+                  <span className="text-xs text-rose-700 bg-rose-50 border border-rose-200/80 px-2.5 py-1 rounded-lg font-semibold">
+                    Active Debt: {summary ? fmtCr(summary.total_liabilities) : '₹73.2L'}
+                  </span>
+                  {summary?.monthly_inhand && (
+                    <span className="text-xs text-indigo-700 bg-indigo-50 border border-indigo-200/80 px-2.5 py-1 rounded-lg font-bold">
+                      In-Hand: ₹{Math.round(summary.monthly_inhand).toLocaleString('en-IN')}/mo
+                    </span>
+                  )}
+                  {summary?.annual_income && (
+                    <span className="text-xs text-slate-700 bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-lg font-medium">
+                      CTC: {fmtCr(summary.annual_income)}
+                    </span>
+                  )}
+                </div>
               </div>
 
               <button

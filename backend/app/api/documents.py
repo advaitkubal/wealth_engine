@@ -67,7 +67,16 @@ async def upload_document(background_tasks: BackgroundTasks, file: UploadFile = 
                         "INSERT INTO liabilities(type, label, remaining, rate, emi, tenure, created_at, updated_at) VALUES(?,?,?,?,?,?,?,?)",
                         (l["type"], l["label"], l["remaining"], l["rate"], l["emi"], l["tenure"], upload_date, upload_date)
                     )
-                    reconciled_liabs += 1
+            # If income was detected, update user_profile table
+            if extracted.get("gross_income") and extracted["gross_income"] > 0:
+                ann_inc = extracted["gross_income"]
+                # Approximate in-hand monthly after standard deduction & basic tax/PF (8% - 15% TDS)
+                inhand_est = round((ann_inc * 0.82) / 12)
+                conn.execute("DELETE FROM user_profile")
+                conn.execute(
+                    "INSERT INTO user_profile(annual_income, monthly_inhand, monthly_expenses, updated_at) VALUES(?,?,?,?)",
+                    (ann_inc, inhand_est, 65000, upload_date)
+                )
     except Exception as e:
         pass
 
@@ -194,6 +203,14 @@ def load_sample_statement():
                     (l["type"], l["label"], l["remaining"], l["rate"], l["emi"], l["tenure"], now, now)
                 )
                 reconciled_liabs += 1
+        if extracted.get("gross_income") and extracted["gross_income"] > 0:
+            ann_inc = extracted["gross_income"]
+            inhand_est = round((ann_inc * 0.82) / 12)
+            conn.execute("DELETE FROM user_profile")
+            conn.execute(
+                "INSERT INTO user_profile(annual_income, monthly_inhand, monthly_expenses, updated_at) VALUES(?,?,?,?)",
+                (ann_inc, inhand_est, 65000, now)
+            )
 
     return {
         "status": "success",
