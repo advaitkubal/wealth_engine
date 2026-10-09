@@ -108,9 +108,11 @@ export default function Today() {
     if (convId) localStorage.setItem(STORAGE_KEY_CONV, convId)
   }, [convId])
 
+  const chatContainerRef = useRef<HTMLDivElement>(null)
+
   useEffect(() => {
-    if (isChatOpen) {
-      chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    if (isChatOpen && chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight
     }
   }, [msgs, thinking, isChatOpen])
 
@@ -674,7 +676,7 @@ export default function Today() {
               </div>
 
             {/* Conversation Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4">
               {msgs.map((m, idx) => (
                 m.role === 'user' ? (
                   <div key={idx} className="flex justify-end">

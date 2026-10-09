@@ -127,8 +127,12 @@ export default function TaxPlanning() {
     if (convId) localStorage.setItem(STORAGE_KEY_CONV, convId)
   }, [convId])
 
+  const chatContainerRef = useRef<HTMLDivElement>(null)
+
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight
+    }
   }, [msgs, thinking])
 
   const clearChat = () => {
@@ -290,7 +294,7 @@ export default function TaxPlanning() {
 
           {/* Chat window */}
           <div className="flex flex-col bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-            <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-5">
+            <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-6 flex flex-col gap-5">
               {msgs.map((m, i) =>
                 m.role === 'ai' ? (
                   <AiCard key={i} msg={m} onSuggest={send} />
