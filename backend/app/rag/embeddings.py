@@ -22,7 +22,7 @@ class EmbeddingService:
 
             self.embeddings = HuggingFaceEmbeddings(
                 model_name=self.model_name,
-                model_kwargs={'device': 'cpu'}  # Force CPU to avoid Apple Metal (MPS) concurrency crashes in FastAPI
+                model_kwargs={'device': 'cpu', 'local_files_only': True}  # Force CPU and local-only to avoid network timeouts and MPS crashes
             )
             self.available = True
             logger.info(f"Embedding model ready: {self.model_name} (on CPU)")

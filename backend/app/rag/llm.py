@@ -26,12 +26,16 @@ class LLMService:
                     model=model,
                     temperature=settings.LLM_TEMPERATURE,
                     max_tokens=settings.LLM_MAX_TOKENS,
+                    request_timeout=2.0,
+                    max_retries=0,
                 )
                 # Also keep a raw openai client for tool-calling (more reliable than LC)
                 import openai
                 self._raw_client = openai.OpenAI(
                     base_url=base_url,
                     api_key="local",
+                    timeout=2.0,
+                    max_retries=0,
                 )
                 self._model = model
                 self.available = True
